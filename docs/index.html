@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>HC Palau - Estadísticas en Directo</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+body { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); min-height: 100vh; padding-bottom: 90px; }
+.container { max-width: 480px; margin: 0 auto; background: #fff; min-height: 100vh; box-shadow: 0 0 20px rgba(0,0,0,0.2); }
+header { background: linear-gradient(to right, #2c3e50, #4a6491); color: #fff; padding: 14px; text-align: center; }
+header img.crest { width: 46px; height: auto; display: block; margin: 0 auto 6px; }
+header h1 { font-size: 1.2rem; }
+.screen { display: none; padding: 14px; }
+.screen.active { display: block; }
+
+/* --- Config --- */
+label { display: block; font-size: 0.8rem; color: #555; margin: 10px 0 4px; }
+input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.95rem; }
+button.primary {
+  width: 100%; margin-top: 16px; padding: 12px; background: #059669; color: #fff; border: none;
+  border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer;
+}
+button.secondary {
+  width: 100%; margin-top: 8px; padding: 10px; background: #eee; color: #333; border: none;
+  border-radius: 8px; font-weight: bold; cursor: pointer;
+}
+.list-item {
+  display: flex; justify-content: space-between; align-items: center; padding: 10px;
+  background: #f8f9fa; border-radius: 6px; margin-bottom: 6px; cursor: pointer;
+}
+.list-item:hover { background: #eef2f5; }
+.error { color: #dc2626; font-size: 0.85rem; margin-top: 6px; min-height: 18px; }
+.hint { color: #7f8c8d; font-size: 0.8rem; margin-top: 4px; }
+.row { display: flex; gap: 8px; }
+.row > * { flex: 1; }
+
+/* --- Match screen --- */
+.scoreboard {
+  display: flex; justify-content: space-between; align-items: center; background: #2c3e50; color: #fff;
+  padding: 14px; border-radius: 10px; margin-bottom: 12px;
+}
+.score { font-size: 1.8rem; font-weight: bold; }
+.opp-name { font-size: 0.75rem; opacity: 0.8; }
+
+.active-player-badge {
+  display: flex; align-items: center; gap: 10px; background: #ecfdf5; border: 2px solid #059669;
+  border-radius: 10px; padding: 12px; margin-bottom: 12px;
+}
+.active-player-badge.empty { background: #f8f9fa; border-color: #ddd; color: #999; }
+.active-player-badge .icon { font-size: 1.4rem; color: #059669; }
+.active-player-badge.empty .icon { color: #bbb; }
+.active-player-badge .label { font-weight: bold; font-size: 1rem; }
+.active-player-badge .sub { font-size: 0.75rem; color: #666; }
+
+.voice-btn {
+  width: 100%; padding: 18px; background: linear-gradient(to right, #0891b2, #0e7490); color: #fff;
+  border: none; border-radius: 12px; font-weight: bold; font-size: 1.1rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px;
+}
+.voice-btn.listening { background: linear-gradient(to right, #dc2626, #b91c1c); animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(220,38,38,.6);} 50% { box-shadow: 0 0 0 14px rgba(220,38,38,0);} }
+.live-transcript { text-align: center; min-height: 20px; font-style: italic; color: #0e7490; margin-bottom: 12px; font-size: 0.9rem; }
+
+.tts-toggle { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 12px; font-size: 0.85rem; color: #555; }
+
+.feed { border: 1px solid #ddd; border-radius: 8px; padding: 8px; height: 260px; overflow-y: auto; background: #fafafa; }
+.feed-item { padding: 6px 8px; margin-bottom: 4px; border-radius: 6px; background: #fff; font-size: 0.82rem; border-left: 3px solid #ddd; }
+.feed-item.registered { border-left-color: #059669; }
+.feed-item.error, .feed-item.not_understood { border-left-color: #dc2626; color: #991b1b; }
+.feed-item.context_set { border-left-color: #0891b2; color: #0e7490; }
+.feed-item.heard { border-left-color: #bbb; color: #888; font-size: 0.75rem; }
+
+/* --- Fixed undo button: siempre visible, sin depender de la voz --- */
+.fixed-undo {
+  position: fixed; bottom: 0; left: 0; right: 0; max-width: 480px; margin: 0 auto;
+  background: #fff; border-top: 2px solid #eee; padding: 10px 14px; z-index: 50;
+}
+.fixed-undo button {
+  width: 100%; padding: 16px; background: #f59e0b; color: #fff; border: none; border-radius: 10px;
+  font-weight: bold; font-size: 1.05rem; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; gap: 8px;
+}
+.fixed-undo button:active { background: #d97706; }
+
+.top-actions { display: flex; gap: 8px; margin-bottom: 12px; }
+.top-actions button { flex: 1; padding: 8px; background: #eee; border: none; border-radius: 6px; font-size: 0.8rem; cursor: pointer; }
+
+.team-card {
+  background: #f8f9fa; border: 1px solid #eee; border-radius: 10px; padding: 12px; margin-bottom: 10px;
+}
+.team-card-name { font-weight: bold; font-size: 1rem; color: #2c3e50; }
+.team-card-sub { font-size: 0.8rem; color: #7f8c8d; margin: 2px 0 8px; }
+.team-card-actions { display: flex; gap: 8px; }
+.team-card-actions button { flex: 1; padding: 8px; border: none; border-radius: 6px; font-size: 0.8rem; cursor: pointer; }
+.team-card-actions .use-team-btn { background: #059669; color: #fff; }
+.team-card-actions .manage-team-btn { background: #eee; color: #333; }
+
+.list-item.inactive { opacity: 0.55; }
+.list-item .actions { display: flex; gap: 6px; }
+.list-item .actions button { border: none; border-radius: 4px; padding: 5px 9px; cursor: pointer; font-size: 0.85rem; }
+.btn-edit { background: #e5e7eb; }
+.btn-remove { background: #dc2626; color: #fff; }
+.btn-restore { background: #059669; color: #fff; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <img src="escudo-hcpalau.png" alt="Escudo HC Palau" class="crest">
+    <h1><i class="fas fa-hockey-puck"></i> HC Palau — Estadísticas en Directo</h1>
+  </header>
+
+  <!-- PANTALLA 1: Configuración de conexión -->
+  <div id="screen-config" class="screen active">
+    <label>URL del backend (Railway/Render, o http://localhost:8000 en local)</label>
+    <input id="cfg-url" placeholder="https://tu-backend.up.railway.app">
+    <label>API Key</label>
+    <input id="cfg-key" placeholder="Tu clave API" type="password">
+    <button class="primary" id="cfg-save-btn"><i class="fas fa-plug"></i> Conectar</button>
+    <div class="error" id="cfg-error"></div>
+  </div>
+
+  <!-- PANTALLA 2: Selección de equipo / rival / partido -->
+  <div id="screen-setup" class="screen">
+    <label>Equipo propio</label>
+    <select id="setup-team"></select>
+    <div class="row">
+      <input id="new-team-name" placeholder="Nombre nuevo equipo">
+      <input id="new-team-cat" placeholder="Categoría">
+    </div>
+    <button class="secondary" id="new-team-btn"><i class="fas fa-plus"></i> Crear equipo</button>
+
+    <label>Rival</label>
+    <select id="setup-opponent"></select>
+    <div class="row">
+      <input id="new-opp-name" placeholder="Nombre del rival">
+      <button class="secondary" id="new-opp-btn" style="max-width:120px;"><i class="fas fa-plus"></i></button>
+    </div>
+
+    <label>Temporada</label>
+    <input id="setup-season" placeholder="2025-2026" value="2025-2026">
+
+    <button class="primary" id="start-match-btn"><i class="fas fa-play"></i> Empezar partido</button>
+    <button class="secondary" id="manage-players-btn"><i class="fas fa-users"></i> Gestionar jugadores del equipo</button>
+    <button class="secondary" id="open-teams-library-btn"><i class="fas fa-folder-open"></i> Ver todos mis equipos</button>
+    <div class="error" id="setup-error"></div>
+  </div>
+
+  <!-- PANTALLA: Biblioteca de todos los equipos guardados -->
+  <div id="screen-teams" class="screen">
+    <button class="secondary" id="teams-back-btn"><i class="fas fa-arrow-left"></i> Volver</button>
+    <h2 style="margin:14px 0 8px;font-size:1.05rem;color:#2c3e50;">Mis equipos</h2>
+    <div class="hint" style="margin-bottom:10px;">Cada equipo guarda su plantilla de forma permanente — no hace falta volver a añadir jugadores cada vez.</div>
+    <div id="teams-library-list"></div>
+  </div>
+
+  <!-- PANTALLA 3: Gestión de jugadores -->
+  <div id="screen-players" class="screen">
+    <button class="secondary" id="back-to-setup-btn"><i class="fas fa-arrow-left"></i> Volver</button>
+    <div class="row" style="margin-top:10px;">
+      <input id="new-player-number" placeholder="Nº" style="max-width:70px;">
+      <input id="new-player-name" placeholder="Nombre">
+    </div>
+    <label style="display:flex;align-items:center;gap:6px;margin-top:8px;">
+      <input type="checkbox" id="new-player-gk" style="width:auto;"> Es portero/a
+    </label>
+    <button class="secondary" id="add-player-btn"><i class="fas fa-plus"></i> Añadir jugador</button>
+    <div id="players-list" style="margin-top:12px;"></div>
+    <div class="error" id="players-error"></div>
+  </div>
+
+  <!-- PANTALLA 4: Partido en directo -->
+  <div id="screen-match" class="screen">
+    <div class="top-actions">
+      <button id="new-match-btn2"><i class="fas fa-plus"></i> Nuevo partido</button>
+      <button id="tts-test-btn"><i class="fas fa-volume-up"></i> Probar voz</button>
+    </div>
+
+    <div class="scoreboard">
+      <div><div class="hint" style="color:#cbd5e1;">HC Palau</div><div class="score" id="score-us">0</div></div>
+      <div style="text-align:center;"><div class="opp-name" id="match-opponent"></div><div class="hint" style="color:#cbd5e1;">vs</div></div>
+      <div><div class="hint" style="color:#cbd5e1;text-align:right;">Rival</div><div class="score" id="score-them">0</div></div>
+    </div>
+
+    <div class="active-player-badge empty" id="active-badge">
+      <div class="icon"><i class="fas fa-user"></i></div>
+      <div>
+        <div class="label" id="active-label">Ningún jugador activo</div>
+        <div class="sub">Di "jugador N" o "portero" para empezar</div>
+      </div>
+    </div>
+
+    <label style="font-size:0.75rem;color:#666;margin-bottom:4px;">Motor de reconocimiento de voz</label>
+    <select id="voice-engine" style="margin-bottom:10px;">
+      <option value="browser">Navegador (rápido, necesita buena conexión y poco ruido)</option>
+      <option value="whisper">Servidor con reducción de ruido (Whisper) — mantener pulsado</option>
+    </select>
+
+    <button class="voice-btn" id="voice-btn"><i class="fas fa-microphone"></i> Iniciar escucha</button>
+    <div class="live-transcript" id="live-transcript"></div>
+
+    <div class="tts-toggle">
+      <input type="checkbox" id="tts-enabled" checked style="width:auto;">
+      <label for="tts-enabled" style="margin:0;">Confirmación por voz (di en alto lo registrado)</label>
+    </div>
+
+    <div class="feed" id="feed"></div>
+  </div>
+
+  <!-- Botón de deshacer: FIJO en pantalla, siempre visible, no depende de la voz -->
+  <div class="fixed-undo" id="fixed-undo" style="display:none;">
+    <button id="undo-btn"><i class="fas fa-undo"></i> Deshacer última acción</button>
+  </div>
+</div>
+
+<script>
+// ---------------------------------------------------------------------
+// Estado y configuración
+// ---------------------------------------------------------------------
+const state = {
+  apiUrl: localStorage.getItem('hcpalau_api_url') || '',
+  apiKey: localStorage.getItem('hcpalau_api_key') || '',
+  teamId: null, opponentId: null, season: '2025-2026', matchId: null,
+  recognition: null, isListening: false,
+};
+
+function $(id) { return document.getElementById(id); }
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $(id).classList.add('active');
+  $('fixed-undo').style.display = (id === 'screen-match') ? 'block' : 'none';
+}
+
+async function api(path, options = {}) {
+  const res = await fetch(state.apiUrl + path, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-API-Key': state.apiKey,
+      ...(options.headers || {}),
+    },
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`${res.status}: ${body}`);
+  }
+  return res.json();
+}
+
+// ---------------------------------------------------------------------
+// Pantalla 1: conexión
+// ---------------------------------------------------------------------
+$('cfg-url').value = state.apiUrl;
+$('cfg-key').value = state.apiKey;
+
+$('cfg-save-btn').addEventListener('click', async () => {
+  state.apiUrl = $('cfg-url').value.replace(/\/$/, '');
+  state.apiKey = $('cfg-key').value;
+  localStorage.setItem('hcpalau_api_url', state.apiUrl);
+  localStorage.setItem('hcpalau_api_key', state.apiKey);
+  $('cfg-error').textContent = '';
+  try {
+    await api('/health', { headers: {} });
+    await loadSetupData();
+    showScreen('screen-setup');
+  } catch (e) {
+    $('cfg-error').textContent = 'No se pudo conectar: ' + e.message;
+  }
+});
+
+// ---------------------------------------------------------------------
+// Pantalla 2: equipo / rival / temporada / crear partido
+// ---------------------------------------------------------------------
+async function loadSetupData() {
+  const teams = await api('/teams');
+  $('setup-team').innerHTML = teams.map(t => `<option value="${t.id}">${t.name}${t.category ? ' ('+t.category+')' : ''}</option>`).join('');
+  if (teams.length) state.teamId = teams[0].id;
+
+  const opponents = await api('/opponents');
+  $('setup-opponent').innerHTML = opponents.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+  if (opponents.length) state.opponentId = opponents[0].id;
+}
+
+$('setup-team').addEventListener('change', e => state.teamId = parseInt(e.target.value));
+$('setup-opponent').addEventListener('change', e => state.opponentId = parseInt(e.target.value));
+
+$('new-team-btn').addEventListener('click', async () => {
+  const name = $('new-team-name').value.trim();
+  if (!name) return;
+  try {
+    const team = await api('/teams', { method: 'POST', body: JSON.stringify({ name, category: $('new-team-cat').value.trim() || null }) });
+    await loadSetupData();
+    $('setup-team').value = team.id;
+    state.teamId = team.id;
+    $('new-team-name').value = ''; $('new-team-cat').value = '';
+  } catch (e) { $('setup-error').textContent = e.message; }
+});
+
+$('new-opp-btn').addEventListener('click', async () => {
+  const name = $('new-opp-name').value.trim();
+  if (!name) return;
+  try {
+    const opp = await api('/opponents', { method: 'POST', body: JSON.stringify({ name }) });
+    await loadSetupData();
+    $('setup-opponent').value = opp.id;
+    state.opponentId = opp.id;
+    $('new-opp-name').value = '';
+  } catch (e) { $('setup-error').textContent = e.message; }
+});
+
+$('manage-players-btn').addEventListener('click', async () => {
+  if (!state.teamId) { $('setup-error').textContent = 'Selecciona o crea un equipo primero'; return; }
+  state.playersReturnScreen = 'screen-setup';
+  await renderPlayersList();
+  showScreen('screen-players');
+});
+
+$('open-teams-library-btn').addEventListener('click', async () => {
+  await renderTeamsLibrary();
+  showScreen('screen-teams');
+});
+$('teams-back-btn').addEventListener('click', () => showScreen('screen-setup'));
+
+async function renderTeamsLibrary() {
+  const container = $('teams-library-list');
+  container.innerHTML = '<div class="hint">Cargando...</div>';
+  const teams = await api('/teams');
+  if (!teams.length) {
+    container.innerHTML = '<div class="hint">Todavía no tienes ningún equipo. Créalo desde la pantalla anterior.</div>';
+    return;
+  }
+  const cards = [];
+  for (const t of teams) {
+    const players = await api(`/teams/${t.id}/players`);
+    cards.push(`
+      <div class="team-card">
+        <div class="team-card-name">${t.name}${t.category ? ' — ' + t.category : ''}</div>
+        <div class="team-card-sub">${players.length} jugador${players.length === 1 ? '' : 'es'} en plantilla</div>
+        <div class="team-card-actions">
+          <button class="use-team-btn" data-id="${t.id}">Usar en partido</button>
+          <button class="manage-team-btn" data-id="${t.id}">Ver plantilla</button>
+        </div>
+      </div>`);
+  }
+  container.innerHTML = cards.join('');
+
+  container.querySelectorAll('.use-team-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      state.teamId = parseInt(btn.dataset.id);
+      await loadSetupData();
+      $('setup-team').value = state.teamId;
+      showScreen('screen-setup');
+    });
+  });
+  container.querySelectorAll('.manage-team-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      state.teamId = parseInt(btn.dataset.id);
+      state.playersReturnScreen = 'screen-teams';
+      await renderPlayersList();
+      showScreen('screen-players');
+    });
+  });
+}
+
+$('start-match-btn').addEventListener('click', async () => {
+  $('setup-error').textContent = '';
+  if (!state.teamId || !state.opponentId) { $('setup-error').textContent = 'Selecciona equipo y rival'; return; }
+  state.season = $('setup-season').value.trim() || '2025-2026';
+  try {
+    const match = await api('/matches', { method: 'POST', body: JSON.stringify({ team_id: state.teamId, opponent_id: state.opponentId, season: state.season }) });
+    state.matchId = match.id;
+    await refreshMatchScreen();
+    showScreen('screen-match');
+    initVoice();
+  } catch (e) { $('setup-error').textContent = e.message; }
+});
+
+// ---------------------------------------------------------------------
+// Pantalla 3: jugadores
+// ---------------------------------------------------------------------
+async function renderPlayersList() {
+  const players = await api(`/teams/${state.teamId}/players?include_inactive=true`);
+  const container = $('players-list');
+  container.innerHTML = players.map(p => `
+    <div class="list-item ${p.active ? '' : 'inactive'}">
+      <span>${p.number} — ${p.name}${p.is_gk ? ' <b>(Portero/a)</b>' : ''}${p.active ? '' : ' <i>(baja)</i>'}</span>
+      <span class="actions">
+        <button class="btn-edit" data-id="${p.id}" data-action="edit">✎</button>
+        ${p.active
+          ? `<button class="btn-remove" data-id="${p.id}" data-action="deactivate">✕</button>`
+          : `<button class="btn-restore" data-id="${p.id}" data-action="reactivate">↺</button>`}
+      </span>
+    </div>`).join('') || '<div class="hint">Sin jugadores todavía</div>';
+
+  container.querySelectorAll('[data-action="deactivate"]').forEach(btn => {
+    btn.addEventListener('click', async () => { await api(`/players/${btn.dataset.id}`, { method: 'DELETE' }); await renderPlayersList(); });
+  });
+  container.querySelectorAll('[data-action="reactivate"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await api(`/players/${btn.dataset.id}`, { method: 'PATCH', body: JSON.stringify({ active: true }) });
+      await renderPlayersList();
+    });
+  });
+  container.querySelectorAll('[data-action="edit"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const player = players.find(p => p.id === parseInt(btn.dataset.id));
+      const newName = prompt('Nombre del jugador:', player.name);
+      if (newName === null) return;
+      const newNumber = prompt('Número:', player.number);
+      if (newNumber === null) return;
+      try {
+        await api(`/players/${player.id}`, { method: 'PATCH', body: JSON.stringify({ name: newName.trim(), number: newNumber.trim() }) });
+        $('players-error').textContent = '';
+        await renderPlayersList();
+      } catch (e) { $('players-error').textContent = e.message; }
+    });
+  });
+}
+
+$('add-player-btn').addEventListener('click', async () => {
+  const number = $('new-player-number').value.trim();
+  const name = $('new-player-name').value.trim();
+  const is_gk = $('new-player-gk').checked;
+  if (!number || !name) return;
+  try {
+    await api(`/teams/${state.teamId}/players`, { method: 'POST', body: JSON.stringify({ number, name, is_gk }) });
+    $('new-player-number').value = ''; $('new-player-name').value = ''; $('new-player-gk').checked = false;
+    $('players-error').textContent = '';
+    await renderPlayersList();
+  } catch (e) { $('players-error').textContent = e.message; }
+});
+
+$('back-to-setup-btn').addEventListener('click', () => showScreen(state.playersReturnScreen || 'screen-setup'));
+
+// ---------------------------------------------------------------------
+// Pantalla 4: partido en directo
+// ---------------------------------------------------------------------
+async function refreshMatchScreen() {
+  const match = await api(`/matches/${state.matchId}`);
+  $('score-us').textContent = match.score_us;
+  $('score-them').textContent = match.score_them;
+  const opponents = await api('/opponents');
+  const opp = opponents.find(o => o.id === match.opponent_id);
+  $('match-opponent').textContent = opp ? opp.name : '';
+  updateActiveBadge(null);
+}
+
+function updateActiveBadge(label) {
+  const badge = $('active-badge');
+  if (label) {
+    badge.classList.remove('empty');
+    $('active-label').textContent = label;
+    $('active-badge').querySelector('.sub').textContent = 'Contexto activo — di solo la acción';
+  } else {
+    badge.classList.add('empty');
+    $('active-label').textContent = 'Ningún jugador activo';
+    $('active-badge').querySelector('.sub').textContent = 'Di "jugador N" o "portero" para empezar';
+  }
+}
+
+function addFeedItem(text, cls) {
+  const div = document.createElement('div');
+  div.className = `feed-item ${cls}`;
+  div.textContent = text;
+  $('feed').appendChild(div);
+  $('feed').scrollTop = $('feed').scrollHeight;
+}
+
+// --- Confirmación por voz (TTS) ---
+function speak(text) {
+  if (!$('tts-enabled').checked) return;
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel(); // no acumular frases si hablan rápido seguido
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'es-ES';
+  utter.rate = 1.05;
+  window.speechSynthesis.speak(utter);
+}
+
+$('tts-test-btn').addEventListener('click', () => speak('Confirmación de voz activada'));
+
+// --- Comando de voz -> backend ---
+async function handleVoiceResponse(resp) {
+  if (resp.heard_text) addFeedItem(`Escuchado: "${resp.heard_text}"`, 'heard');
+  addFeedItem(resp.message, resp.status);
+  speak(resp.message);
+  updateActiveBadge(resp.active_player_label || null);
+  if (resp.status === 'registered' || resp.status === 'corrected' || resp.status === 'undone') {
+    const match = await api(`/matches/${state.matchId}`);
+    $('score-us').textContent = match.score_us;
+    $('score-them').textContent = match.score_them;
+  }
+}
+
+async function sendVoiceCommand(text) {
+  addFeedItem(`Escuchado: "${text}"`, 'heard');
+  try {
+    const resp = await api(`/matches/${state.matchId}/voice-command`, { method: 'POST', body: JSON.stringify({ text }) });
+    resp.heard_text = null; // ya se ha mostrado arriba con la transcripción en vivo del navegador
+    await handleVoiceResponse(resp);
+  } catch (e) {
+    addFeedItem('Error de conexión: ' + e.message, 'error');
+    speak('Error de conexión');
+  }
+}
+
+async function sendVoiceAudio(blob) {
+  addFeedItem('Procesando audio…', 'heard');
+  try {
+    const formData = new FormData();
+    formData.append('audio', blob, 'command.webm');
+    const res = await fetch(`${state.apiUrl}/matches/${state.matchId}/voice-audio`, {
+      method: 'POST',
+      headers: { 'X-API-Key': state.apiKey },
+      body: formData,
+    });
+    if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+    const resp = await res.json();
+    await handleVoiceResponse(resp);
+  } catch (e) {
+    addFeedItem('Error de conexión: ' + e.message, 'error');
+    speak('Error de conexión');
+  }
+}
+
+// --- Botón de deshacer, SIEMPRE visible, funciona sin voz ---
+$('undo-btn').addEventListener('click', async () => {
+  try {
+    const resp = await api(`/matches/${state.matchId}/undo-last`, { method: 'POST' });
+    addFeedItem(resp.message, resp.status === 'error' ? 'error' : 'undone');
+    speak(resp.message);
+    const match = await api(`/matches/${state.matchId}`);
+    $('score-us').textContent = match.score_us;
+    $('score-them').textContent = match.score_them;
+  } catch (e) {
+    addFeedItem('Error: ' + e.message, 'error');
+  }
+});
+
+$('new-match-btn2').addEventListener('click', () => showScreen('screen-setup'));
+
+// --- Reconocimiento de voz (navegador) ---
+function initVoice() {
+  const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognitionCtor) {
+    addFeedItem('Este navegador no soporta comandos de voz. Usa Chrome.', 'error');
+    return;
+  }
+  state.recognition = new SpeechRecognitionCtor();
+  state.recognition.lang = 'es-ES';
+  state.recognition.continuous = true;
+  state.recognition.interimResults = true;
+  state.recognition.maxAlternatives = 1;
+
+  state.recognition.onresult = (event) => {
+    const last = event.results.length - 1;
+    const result = event.results[last];
+    $('live-transcript').textContent = result[0].transcript;
+    if (result.isFinal) {
+      sendVoiceCommand(result[0].transcript);
+      $('live-transcript').textContent = '';
+    }
+  };
+
+  state.recognition.onerror = (event) => {
+    if (event.error === 'no-speech' || event.error === 'aborted') return;
+    addFeedItem('Error de voz: ' + event.error, 'error');
+    if (event.error === 'not-allowed') stopListening();
+  };
+
+  state.recognition.onend = () => {
+    if (state.isListening) { try { state.recognition.start(); } catch (e) {} }
+  };
+}
+
+function stopListening() {
+  state.isListening = false;
+  const btn = $('voice-btn');
+  btn.classList.remove('listening');
+  btn.innerHTML = '<i class="fas fa-microphone"></i> Iniciar escucha';
+}
+
+$('voice-engine').addEventListener('change', () => {
+  const btn = $('voice-btn');
+  if (state.isListening) { state.recognition && state.recognition.stop(); stopListening(); }
+  if ($('voice-engine').value === 'whisper') {
+    btn.innerHTML = '<i class="fas fa-microphone"></i> Mantén pulsado para hablar';
+  } else {
+    btn.innerHTML = '<i class="fas fa-microphone"></i> Iniciar escucha';
+  }
+});
+
+// --- Modo navegador: escucha continua con Web Speech API ---
+$('voice-btn').addEventListener('click', () => {
+  if ($('voice-engine').value !== 'browser') return; // en modo whisper se usa pulsar-y-mantener, no click
+  if (!state.recognition) { addFeedItem('Reconocimiento de voz no disponible', 'error'); return; }
+  const btn = $('voice-btn');
+  if (state.isListening) {
+    state.isListening = false;
+    state.recognition.stop();
+    btn.classList.remove('listening');
+    btn.innerHTML = '<i class="fas fa-microphone"></i> Iniciar escucha';
+  } else {
+    try {
+      state.isListening = true;
+      state.recognition.start();
+      btn.classList.add('listening');
+      btn.innerHTML = '<i class="fas fa-microphone"></i> Escuchando...';
+    } catch (e) {
+      state.isListening = false;
+      addFeedItem('No se pudo iniciar el micrófono: ' + e.message, 'error');
+    }
+  }
+});
+
+// --- Modo Whisper: mantener pulsado para grabar, con supresión de ruido explícita ---
+let mediaRecorder = null;
+let audioChunks = [];
+let mediaStream = null;
+
+async function startRecording() {
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    });
+  } catch (e) {
+    addFeedItem('No se pudo acceder al micrófono: ' + e.message, 'error');
+    return;
+  }
+  audioChunks = [];
+  mediaRecorder = new MediaRecorder(mediaStream);
+  mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
+  mediaRecorder.onstop = () => {
+    mediaStream.getTracks().forEach(t => t.stop());
+    const blob = new Blob(audioChunks, { type: 'audio/webm' });
+    if (blob.size > 500) sendVoiceAudio(blob); // ignora grabaciones vacías (pulsación accidental)
+  };
+  mediaRecorder.start();
+  $('voice-btn').classList.add('listening');
+  $('voice-btn').innerHTML = '<i class="fas fa-microphone"></i> Grabando... suelta para enviar';
+}
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+  $('voice-btn').classList.remove('listening');
+  $('voice-btn').innerHTML = '<i class="fas fa-microphone"></i> Mantén pulsado para hablar';
+}
+
+const voiceBtnEl = $('voice-btn');
+voiceBtnEl.addEventListener('mousedown', () => { if ($('voice-engine').value === 'whisper') startRecording(); });
+voiceBtnEl.addEventListener('touchstart', (e) => { if ($('voice-engine').value === 'whisper') { e.preventDefault(); startRecording(); } });
+voiceBtnEl.addEventListener('mouseup', () => { if ($('voice-engine').value === 'whisper') stopRecording(); });
+voiceBtnEl.addEventListener('mouseleave', () => { if ($('voice-engine').value === 'whisper' && mediaRecorder && mediaRecorder.state !== 'inactive') stopRecording(); });
+voiceBtnEl.addEventListener('touchend', (e) => { if ($('voice-engine').value === 'whisper') { e.preventDefault(); stopRecording(); } });
+
+// ---------------------------------------------------------------------
+// Arranque
+// ---------------------------------------------------------------------
+(async function init() {
+  if (state.apiUrl && state.apiKey) {
+    try {
+      await api('/health', { headers: {} });
+      await loadSetupData();
+      showScreen('screen-setup');
+    } catch (e) {
+      showScreen('screen-config');
+    }
+  }
+})();
+</script>
+</body>
+</html>

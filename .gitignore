@@ -1,0 +1,8 @@
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
+*.pyc
+backend/.env
+backend/hcpalau.db
+*.log
+.DS_Store
