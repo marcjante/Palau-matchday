@@ -62,6 +62,9 @@ button.secondary {
 .active-player-badge .sub { font-size: 0.75rem; color: #666; }
 
 .section-label { font-size: 0.75rem; color: #666; margin: 4px 0 6px; font-weight: bold; }
+.auth-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.auth-tab { flex: 1; padding: 10px; border: none; background: #eee; color: #666; border-radius: 8px; font-weight: bold; cursor: pointer; }
+.auth-tab.active { background: #2c3e50; color: #fff; }
 .match-players-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .match-player-card {
   background: #f8f9fa; border: 2px solid #ddd; border-radius: 8px; padding: 8px 10px; cursor: pointer;
@@ -145,14 +148,32 @@ button.secondary {
     <h1><i class="fas fa-hockey-puck"></i> HC Palau — Estadísticas en Directo</h1>
   </header>
 
-  <!-- PANTALLA 1: Configuración de conexión -->
-  <div id="screen-config" class="screen active">
-    <label>URL del backend (Railway/Render, o http://localhost:8000 en local)</label>
-    <input id="cfg-url" placeholder="https://tu-backend.up.railway.app">
-    <label>API Key</label>
-    <input id="cfg-key" placeholder="Tu clave API" type="password">
-    <button class="primary" id="cfg-save-btn"><i class="fas fa-plug"></i> Conectar</button>
-    <div class="error" id="cfg-error"></div>
+  <!-- PANTALLA 1: Iniciar sesión / crear cuenta -->
+  <div id="screen-login" class="screen active">
+    <div class="auth-tabs">
+      <button id="tab-login" class="auth-tab active">Iniciar sesión</button>
+      <button id="tab-register" class="auth-tab">Crear cuenta</button>
+    </div>
+
+    <div id="login-form">
+      <label>Usuario</label>
+      <input id="login-username" placeholder="Tu nombre de usuario" autocomplete="username">
+      <label>Contraseña</label>
+      <input id="login-password" type="password" placeholder="Tu contraseña" autocomplete="current-password">
+      <button class="primary" id="login-btn"><i class="fas fa-right-to-bracket"></i> Entrar</button>
+    </div>
+
+    <div id="register-form" style="display:none;">
+      <label>Usuario</label>
+      <input id="register-username" placeholder="Elige un nombre de usuario" autocomplete="username">
+      <label>Contraseña</label>
+      <input id="register-password" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+      <label>Código de registro</label>
+      <input id="register-code" type="password" placeholder="Te lo da quien administra el equipo">
+      <button class="primary" id="register-btn"><i class="fas fa-user-plus"></i> Crear cuenta</button>
+    </div>
+
+    <div class="error" id="auth-error"></div>
   </div>
 
   <!-- PANTALLA 2: Selección de equipo / rival / partido -->
@@ -178,6 +199,7 @@ button.secondary {
     <button class="primary" id="start-match-btn"><i class="fas fa-play"></i> Empezar partido</button>
     <button class="secondary" id="manage-players-btn"><i class="fas fa-users"></i> Gestionar jugadores del equipo</button>
     <button class="secondary" id="open-teams-library-btn"><i class="fas fa-folder-open"></i> Ver todos mis equipos</button>
+    <button class="secondary" id="logout-btn" style="background:#fee2e2;color:#991b1b;margin-top:16px;"><i class="fas fa-right-from-bracket"></i> Cerrar sesión</button>
     <div class="error" id="setup-error"></div>
   </div>
 
@@ -265,9 +287,14 @@ button.secondary {
 // ---------------------------------------------------------------------
 // Estado y configuración
 // ---------------------------------------------------------------------
+// La URL del backend no es secreta (es solo la dirección del servidor,
+// como la de cualquier web) — lo que protege el acceso es el login.
+const BACKEND_URL = 'https://palau-matchday-production.up.railway.app';
+
 const state = {
-  apiUrl: localStorage.getItem('hcpalau_api_url') || '',
-  apiKey: localStorage.getItem('hcpalau_api_key') || '',
+  apiUrl: BACKEND_URL,
+  token: localStorage.getItem('hcpalau_token') || '',
+  username: localStorage.getItem('hcpalau_username') || '',
   teamId: null, opponentId: null, season: '2025-2026', matchId: null,
   recognition: null, isListening: false,
 };
@@ -284,36 +311,84 @@ async function api(path, options = {}) {
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      'X-API-Key': state.apiKey,
+      'Authorization': `Bearer ${state.token}`,
       ...(options.headers || {}),
     },
   });
   if (!res.ok) {
     const body = await res.text();
+    if (res.status === 401) {
+      // Token caducado o inválido: cerrar sesión y volver al login
+      logout();
+    }
     throw new Error(`${res.status}: ${body}`);
   }
   return res.json();
 }
 
-// ---------------------------------------------------------------------
-// Pantalla 1: conexión
-// ---------------------------------------------------------------------
-$('cfg-url').value = state.apiUrl;
-$('cfg-key').value = state.apiKey;
+function logout() {
+  state.token = '';
+  localStorage.removeItem('hcpalau_token');
+  localStorage.removeItem('hcpalau_username');
+  showScreen('screen-login');
+}
 
-$('cfg-save-btn').addEventListener('click', async () => {
-  state.apiUrl = $('cfg-url').value.replace(/\/$/, '');
-  state.apiKey = $('cfg-key').value;
-  localStorage.setItem('hcpalau_api_url', state.apiUrl);
-  localStorage.setItem('hcpalau_api_key', state.apiKey);
-  $('cfg-error').textContent = '';
+// ---------------------------------------------------------------------
+// Pantalla 1: login / registro
+// ---------------------------------------------------------------------
+$('tab-login').addEventListener('click', () => {
+  $('tab-login').classList.add('active');
+  $('tab-register').classList.remove('active');
+  $('login-form').style.display = 'block';
+  $('register-form').style.display = 'none';
+  $('auth-error').textContent = '';
+});
+$('tab-register').addEventListener('click', () => {
+  $('tab-register').classList.add('active');
+  $('tab-login').classList.remove('active');
+  $('register-form').style.display = 'block';
+  $('login-form').style.display = 'none';
+  $('auth-error').textContent = '';
+});
+
+async function authSuccess(data) {
+  state.token = data.access_token;
+  state.username = data.user.username;
+  localStorage.setItem('hcpalau_token', state.token);
+  localStorage.setItem('hcpalau_username', state.username);
+  await loadSetupData();
+  showScreen('screen-setup');
+}
+
+$('login-btn').addEventListener('click', async () => {
+  $('auth-error').textContent = '';
+  const username = $('login-username').value.trim();
+  const password = $('login-password').value;
+  if (!username || !password) { $('auth-error').textContent = 'Rellena usuario y contraseña'; return; }
   try {
-    await api('/health', { headers: {} });
-    await loadSetupData();
-    showScreen('screen-setup');
-  } catch (e) {
-    $('cfg-error').textContent = 'No se pudo conectar: ' + e.message;
-  }
+    const res = await fetch(`${state.apiUrl}/auth/login`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'No se pudo iniciar sesión');
+    await authSuccess(await res.json());
+  } catch (e) { $('auth-error').textContent = e.message; }
+});
+
+$('register-btn').addEventListener('click', async () => {
+  $('auth-error').textContent = '';
+  const username = $('register-username').value.trim();
+  const password = $('register-password').value;
+  const registration_code = $('register-code').value;
+  if (!username || !password || !registration_code) { $('auth-error').textContent = 'Rellena todos los campos'; return; }
+  try {
+    const res = await fetch(`${state.apiUrl}/auth/register`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, registration_code }),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'No se pudo crear la cuenta');
+    await authSuccess(await res.json());
+  } catch (e) { $('auth-error').textContent = e.message; }
 });
 
 // ---------------------------------------------------------------------
@@ -366,6 +441,10 @@ $('manage-players-btn').addEventListener('click', async () => {
 $('open-teams-library-btn').addEventListener('click', async () => {
   await renderTeamsLibrary();
   showScreen('screen-teams');
+});
+
+$('logout-btn').addEventListener('click', () => {
+  if (confirm('¿Cerrar sesión en este dispositivo?')) logout();
 });
 $('teams-back-btn').addEventListener('click', () => showScreen('screen-setup'));
 
@@ -661,7 +740,7 @@ async function sendVoiceAudio(blob) {
     formData.append('audio', blob, 'command.webm');
     const res = await fetch(`${state.apiUrl}/matches/${state.matchId}/voice-audio`, {
       method: 'POST',
-      headers: { 'X-API-Key': state.apiKey },
+      headers: { 'Authorization': `Bearer ${state.token}` },
       body: formData,
     });
     if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
@@ -689,12 +768,12 @@ $('undo-btn').addEventListener('click', async () => {
 
 // --- Exportar CSV / PDF ---
 // No se puede usar un <a href> normal porque la API exige la cabecera
-// X-API-Key; hay que pedir el archivo con fetch y forzar la descarga
+// Authorization; hay que pedir el archivo con fetch y forzar la descarga
 // manualmente a partir del blob devuelto.
 async function downloadExport(path, fallbackFilename) {
   try {
     const res = await fetch(`${state.apiUrl}${path}`, {
-      headers: { 'X-API-Key': state.apiKey },
+      headers: { 'Authorization': `Bearer ${state.token}` },
     });
     if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
     const blob = await res.blob();
@@ -839,13 +918,14 @@ voiceBtnEl.addEventListener('touchend', (e) => { if ($('voice-engine').value ===
 // Arranque
 // ---------------------------------------------------------------------
 (async function init() {
-  if (state.apiUrl && state.apiKey) {
+  if (state.token) {
     try {
-      await api('/health', { headers: {} });
-      await loadSetupData();
+      await loadSetupData(); // cualquier llamada protegida sirve para comprobar que el token sigue siendo válido
       showScreen('screen-setup');
     } catch (e) {
-      showScreen('screen-config');
+      // api() ya limpia el token y muestra screen-login si la respuesta es 401
+      if (!state.token) return;
+      showScreen('screen-login');
     }
   }
 })();
