@@ -61,6 +61,31 @@ button.secondary {
 .active-player-badge .label { font-weight: bold; font-size: 1rem; }
 .active-player-badge .sub { font-size: 0.75rem; color: #666; }
 
+.section-label { font-size: 0.75rem; color: #666; margin: 4px 0 6px; font-weight: bold; }
+.match-players-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.match-player-card {
+  background: #f8f9fa; border: 2px solid #ddd; border-radius: 8px; padding: 8px 10px; cursor: pointer;
+  text-align: center; min-width: 64px; transition: all 0.15s;
+}
+.match-player-card:hover { transform: translateY(-2px); }
+.match-player-card.selected { border-color: #059669; background: #ecfdf5; }
+.match-player-card.is-gk { border-left: 4px solid #0891b2; }
+.match-player-card .num { font-size: 1.1rem; font-weight: bold; color: #2c3e50; }
+.match-player-card .name { font-size: 0.65rem; color: #555; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.manual-action-panel { background: #f8f9fa; border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+.manual-selected-label { font-weight: bold; color: #2c3e50; margin-bottom: 8px; font-size: 0.9rem; }
+.manual-action-buttons { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+@media (min-width: 420px) { .manual-action-buttons { grid-template-columns: repeat(3, 1fr); } }
+.manual-action-buttons button {
+  padding: 10px 6px; border: none; border-radius: 6px; font-weight: bold; font-size: 0.78rem;
+  cursor: pointer; color: #fff;
+}
+.manual-action-buttons button.a-goal { background: #dc2626; }
+.manual-action-buttons button.a-good { background: #059669; }
+.manual-action-buttons button.a-bad { background: #f59e0b; }
+.manual-action-buttons button.a-neutral { background: #0891b2; }
+
 .voice-btn {
   width: 100%; padding: 18px; background: linear-gradient(to right, #0891b2, #0e7490); color: #fff;
   border: none; border-radius: 12px; font-weight: bold; font-size: 1.1rem; cursor: pointer;
@@ -198,6 +223,14 @@ button.secondary {
         <div class="label" id="active-label">Ningún jugador activo</div>
         <div class="sub">Di "jugador N" o "portero" para empezar</div>
       </div>
+    </div>
+
+    <div class="section-label">Jugadores — toca uno para registrar a mano</div>
+    <div id="match-players-list" class="match-players-list"></div>
+
+    <div id="manual-action-panel" class="manual-action-panel" style="display:none;">
+      <div id="manual-selected-label" class="manual-selected-label"></div>
+      <div id="manual-action-buttons" class="manual-action-buttons"></div>
     </div>
 
     <label style="font-size:0.75rem;color:#666;margin-bottom:4px;">Motor de reconocimiento de voz</label>
@@ -475,12 +508,14 @@ $('back-to-setup-btn').addEventListener('click', () => showScreen(state.playersR
 // ---------------------------------------------------------------------
 async function refreshMatchScreen() {
   const match = await api(`/matches/${state.matchId}`);
+  state.matchTeamId = match.team_id;
   $('score-us').textContent = match.score_us;
   $('score-them').textContent = match.score_them;
   const opponents = await api('/opponents');
   const opp = opponents.find(o => o.id === match.opponent_id);
   $('match-opponent').textContent = opp ? opp.name : '';
   updateActiveBadge(null);
+  await renderMatchPlayers();
 }
 
 function updateActiveBadge(label) {
@@ -493,6 +528,83 @@ function updateActiveBadge(label) {
     badge.classList.add('empty');
     $('active-label').textContent = 'Ningún jugador activo';
     $('active-badge').querySelector('.sub').textContent = 'Di "jugador N" o "portero" para empezar';
+  }
+}
+
+// ---------------------------------------------------------------------
+// Selección de jugador y registro manual (a mano, sin voz)
+// ---------------------------------------------------------------------
+const OUTFIELD_ACTIONS = [
+  ['goal', 'Gol', 'a-goal'], ['assist', 'Asistencia', 'a-good'],
+  ['shot_on_target', 'Tiro a portería', 'a-neutral'], ['shot_off', 'Tiro fuera', 'a-bad'],
+  ['recovery', 'Recuperación', 'a-good'], ['loss', 'Pérdida', 'a-bad'],
+  ['interception', 'Intercepción', 'a-good'], ['defensive_action', 'Acción defensiva', 'a-neutral'],
+  ['foul_committed', 'Falta cometida', 'a-bad'], ['foul_received', 'Falta recibida', 'a-neutral'],
+  ['card_yellow', 'Tarjeta amarilla', 'a-bad'], ['card_red', 'Tarjeta roja', 'a-goal'],
+];
+const GK_ACTIONS = [
+  ['gk_save', 'Parada', 'a-good'], ['gk_goal_conceded', 'Gol recibido', 'a-goal'],
+  ['gk_penalty_saved', 'Penalti parado', 'a-good'], ['gk_penalty_conceded', 'Penalti recibido', 'a-goal'],
+  ['gk_exit_good', 'Salida correcta', 'a-neutral'], ['gk_exit_bad', 'Salida fallida', 'a-bad'],
+  ['gk_distribution', 'Distribución/Pase', 'a-neutral'],
+];
+
+async function renderMatchPlayers() {
+  if (!state.matchTeamId) return;
+  const players = await api(`/teams/${state.matchTeamId}/players`);
+  state.matchPlayers = players;
+  const container = $('match-players-list');
+  container.innerHTML = players.map(p => `
+    <div class="match-player-card ${p.is_gk ? 'is-gk' : ''} ${state.selectedManualPlayerId === p.id ? 'selected' : ''}" data-id="${p.id}">
+      <div class="num">${p.number}</div>
+      <div class="name">${p.name}</div>
+    </div>`).join('') || '<div class="hint">Añade jugadores al equipo primero</div>';
+
+  container.querySelectorAll('.match-player-card').forEach(card => {
+    card.addEventListener('click', () => selectManualPlayer(parseInt(card.dataset.id)));
+  });
+}
+
+function selectManualPlayer(playerId) {
+  state.selectedManualPlayerId = playerId;
+  const player = (state.matchPlayers || []).find(p => p.id === playerId);
+  if (!player) return;
+
+  $('match-players-list').querySelectorAll('.match-player-card').forEach(card => {
+    card.classList.toggle('selected', parseInt(card.dataset.id) === playerId);
+  });
+
+  const panel = $('manual-action-panel');
+  panel.style.display = 'block';
+  $('manual-selected-label').textContent = `${player.is_gk ? 'Portero/a' : 'Jugador'} ${player.number} — ${player.name}`;
+
+  const actions = player.is_gk ? GK_ACTIONS : OUTFIELD_ACTIONS;
+  $('manual-action-buttons').innerHTML = actions.map(([type, label, cls]) =>
+    `<button class="${cls}" data-type="${type}">${label}</button>`
+  ).join('');
+
+  $('manual-action-buttons').querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => registerManualAction(playerId, btn.dataset.type, btn.textContent));
+  });
+}
+
+async function registerManualAction(playerId, actionType, label) {
+  try {
+    const event = await api(`/matches/${state.matchId}/events`, {
+      method: 'POST',
+      body: JSON.stringify({ player_id: playerId, action_type: actionType }),
+    });
+    const player = (state.matchPlayers || []).find(p => p.id === playerId);
+    const role = player && player.is_gk ? 'Portero/a' : 'Jugador';
+    const number = player ? player.number : '';
+    const message = `Registrado (manual): ${role} ${number} — ${label}`;
+    addFeedItem(message, 'registered');
+    speak(message);
+    const match = await api(`/matches/${state.matchId}`);
+    $('score-us').textContent = match.score_us;
+    $('score-them').textContent = match.score_them;
+  } catch (e) {
+    addFeedItem('Error al registrar: ' + e.message, 'error');
   }
 }
 
