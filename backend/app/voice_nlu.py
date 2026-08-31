@@ -35,6 +35,7 @@ ACTION_DELTAS = {
     "gk_exit_good":         {"exits_good": 1},
     "gk_exit_bad":          {"exits_bad": 1},
     "gk_distribution":      {"distributions": 1},
+    "gk_shot_off":          {"shots_off": 1},
 }
 
 ACTION_LABELS = {
@@ -45,6 +46,7 @@ ACTION_LABELS = {
     "gk_save": "Parada", "gk_goal_conceded": "Gol recibido", "gk_penalty_saved": "Penalti parado",
     "gk_penalty_conceded": "Penalti recibido", "gk_exit_good": "Salida correcta", "gk_exit_bad": "Salida fallida",
     "gk_distribution": "Distribución/Pase",
+    "gk_shot_off": "Tiro fuera",
 }
 
 NUMBER_WORDS = {
@@ -74,6 +76,7 @@ GK_PATTERNS = [
     ("gk_penalty_saved",    re.compile(r"penalti parado|para el penalti|penalti detenido")),
     ("gk_penalty_conceded", re.compile(r"penalti recibido|le pitan penalti|penalti en contra")),
     ("gk_goal_conceded",    re.compile(r"gol recibido|encajado|le meten gol|gol encajado")),
+    ("gk_shot_off",         re.compile(r"tiro fuera|dispara fuera|chuta fuera")),
     ("gk_exit_good",        re.compile(r"salida correcta|sale bien")),
     ("gk_exit_bad",         re.compile(r"salida fallida|sale mal")),
     ("gk_distribution",     re.compile(r"\bpase\b|\bsaque\b|distribucion")),

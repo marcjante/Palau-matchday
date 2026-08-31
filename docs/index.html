@@ -109,6 +109,70 @@ button.secondary {
 .goal-zone.has-goals { background: #dc2626; }
 .goal-zone.has-shots-only { background: #475569; }
 
+/* --- Paneles de dos columnas: DEFENSA / ATAQUE (estilo app clásica) --- */
+.zone-panels { display: flex; gap: 8px; margin-bottom: 12px; }
+.zone-panel {
+  flex: 1; min-width: 0; background: #fff; border: 2px solid #ddd; border-radius: 10px;
+  padding: 10px 8px; display: flex; flex-direction: column; align-items: center;
+}
+.zone-panel-defense { border-color: #3498db; }
+.zone-panel-attack { border-top: 3px solid #059669; }
+.zone-panel-title { font-weight: bold; font-size: 0.78rem; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; }
+.title-defense { color: #3498db; }
+.title-attack { color: #059669; }
+
+.goal-grid-small {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; width: 100%;
+  background: #1e293b; padding: 4px; border-radius: 6px; margin-bottom: 8px;
+}
+.goal-grid-small .goal-zone { min-height: 34px; padding: 3px 1px; }
+.goal-grid-small .goal-zone .zone-count { font-size: 0.68rem; font-weight: bold; }
+.goal-grid-small .goal-zone .zone-label { font-size: 0.5rem; }
+.goal-grid-small .goal-zone .zone-sub { display: none; }
+
+.zone-buttons-row { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; margin-bottom: 8px; }
+.zone-pill {
+  background: #dbeafe; color: #1e40af; border: none; border-radius: 5px; padding: 3px 6px;
+  font-size: 0.62rem; font-weight: bold; cursor: pointer;
+}
+.zone-pill.zone-pill-selected { background: #1e40af; color: #fff; }
+
+.zone-off-btn {
+  width: 100%; background: #f59e0b; color: #fff; border: none; border-radius: 6px; padding: 7px;
+  font-size: 0.68rem; font-weight: bold; cursor: pointer; margin-bottom: 8px;
+}
+.zone-hint { font-size: 0.6rem; color: #94a3b8; text-align: center; margin-bottom: 8px; min-height: 14px; }
+.zone-action-row { display: flex; gap: 6px; width: 100%; }
+.zone-action-btn {
+  flex: 1; border: none; border-radius: 6px; padding: 10px 4px; font-size: 0.72rem; font-weight: bold;
+  color: #fff; cursor: pointer;
+}
+.zone-good { background: #059669; }
+.zone-bad { background: #dc2626; }
+
+/* --- Fila de acciones globales (estilo app clásica) --- */
+.global-actions-row { display: flex; gap: 6px; margin-bottom: 14px; }
+.global-action-pill {
+  flex: 1; border: none; border-radius: 6px; padding: 10px 4px; font-size: 0.68rem; font-weight: bold;
+  color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;
+}
+.pill-undo { background: #6b7280; }
+.pill-pdf { background: #7c3aed; }
+.pill-voice { background: #0891b2; }
+.pill-voice.listening { background: #dc2626; animation: pulse-mic 1.5s infinite; }
+
+/* --- Tarjetas de estadísticas del portero --- */
+.stats-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 14px; }
+.stat-card { background: #f8f9fa; border-radius: 8px; padding: 10px; text-align: center; }
+.stat-card .stat-value { font-size: 1.3rem; font-weight: bold; color: #2c3e50; }
+.stat-card .stat-label { font-size: 0.65rem; color: #666; }
+
+/* --- Tabla clásica de estadísticas por jugador --- */
+.classic-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; margin-bottom: 14px; min-width: 420px; }
+.classic-table th { background: #059669; color: #fff; padding: 6px 4px; text-align: center; }
+.classic-table td { padding: 5px 4px; text-align: center; border-bottom: 1px solid #eee; }
+.classic-table tr:nth-child(even) { background: #f8f9fa; }
+
 .voice-btn {
   width: 100%; padding: 18px; background: linear-gradient(to right, #0891b2, #0e7490); color: #fff;
   border: none; border-radius: 12px; font-weight: bold; font-size: 1.1rem; cursor: pointer;
@@ -259,6 +323,49 @@ button.secondary {
       <div><div class="hint" style="color:#cbd5e1;text-align:right;">Rival</div><div class="score" id="score-them">0</div></div>
     </div>
 
+    <div class="zone-panels">
+      <div class="zone-panel zone-panel-defense">
+        <div class="zone-panel-title title-defense"><i class="fas fa-shield-alt"></i> DEFENSA</div>
+        <div id="goal-grid-defense" class="goal-grid-small"></div>
+        <div id="zone-buttons-defense" class="zone-buttons-row"></div>
+        <button id="gk-shot-off-btn" class="zone-off-btn"><i class="fas fa-up-right-from-square"></i> Tiro Fuera de Portería</button>
+        <div id="defense-hint" class="zone-hint">Sin portero/a en la plantilla</div>
+        <div class="zone-action-row">
+          <button id="gk-save-btn" class="zone-action-btn zone-good">Parada</button>
+          <button id="gk-goal-btn" class="zone-action-btn zone-bad">Gol Recibido</button>
+        </div>
+      </div>
+
+      <div class="zone-panel zone-panel-attack">
+        <div class="zone-panel-title title-attack"><i class="fas fa-bullseye"></i> ATAQUE</div>
+        <div id="goal-grid-attack" class="goal-grid-small"></div>
+        <div id="zone-buttons-attack" class="zone-buttons-row"></div>
+        <button id="attack-shot-off-btn" class="zone-off-btn"><i class="fas fa-up-right-from-square"></i> Tiro Fuera de Portería</button>
+        <div id="attack-hint" class="zone-hint">Selecciona un jugador (abajo) y una zona</div>
+        <div class="zone-action-row">
+          <button id="attack-goal-btn" class="zone-action-btn zone-bad">Gol</button>
+          <button id="attack-saved-btn" class="zone-action-btn zone-good">Parado</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="global-actions-row">
+      <button id="global-undo-btn" class="global-action-pill pill-undo"><i class="fas fa-rotate-left"></i> Eliminar Última Acción</button>
+      <button id="global-pdf-btn" class="global-action-pill pill-pdf"><i class="fas fa-file-pdf"></i> Generar PDF</button>
+      <button id="global-voice-btn" class="global-action-pill pill-voice"><i class="fas fa-microphone"></i> Comandos de Voz</button>
+    </div>
+
+    <div class="section-label">Estadísticas del Portero</div>
+    <div id="gk-stats-cards" class="stats-cards"></div>
+
+    <div class="section-label">Estadísticas por Jugador (Ataque)</div>
+    <div class="table-scroll">
+      <table class="classic-table">
+        <thead><tr><th>Jugador</th><th>Tiros</th><th>Goles</th><th>Parados</th><th>Fuera</th><th>% Acierto</th></tr></thead>
+        <tbody id="attack-stats-body"></tbody>
+      </table>
+    </div>
+
     <div class="active-player-badge empty" id="active-badge">
       <div class="icon"><i class="fas fa-user"></i></div>
       <div>
@@ -267,7 +374,7 @@ button.secondary {
       </div>
     </div>
 
-    <div class="section-label">Jugadores — toca uno para registrar a mano</div>
+    <div class="section-label">Jugadores — toca uno para elegir quién ataca / más acciones</div>
     <div id="match-players-list" class="match-players-list"></div>
 
     <div id="manual-action-panel" class="manual-action-panel" style="display:none;">
@@ -278,12 +385,6 @@ button.secondary {
 
       <div id="manual-action-buttons" class="manual-action-buttons"></div>
     </div>
-
-    <div class="section-label">Portería rival (ataque)</div>
-    <div id="goal-grid-attack" class="goal-grid"></div>
-
-    <div class="section-label">Nuestra portería (defensa)</div>
-    <div id="goal-grid-defense" class="goal-grid"></div>
 
     <label style="font-size:0.75rem;color:#666;margin-bottom:4px;">Motor de reconocimiento de voz</label>
     <select id="voice-engine" style="margin-bottom:10px;">
@@ -299,6 +400,7 @@ button.secondary {
       <label for="tts-enabled" style="margin:0;">Confirmación por voz (di en alto lo registrado)</label>
     </div>
 
+    <div class="section-label">Eventos del Partido</div>
     <div class="feed" id="feed"></div>
 
     <div class="top-actions" style="margin-top:12px;">
@@ -626,6 +728,11 @@ async function refreshMatchScreen() {
   updateActiveBadge(null);
   await renderMatchPlayers();
   renderZoneSelector();
+  state.zoneDefense = null;
+  state.zoneAttack = null;
+  renderZoneButtonsRow('zone-buttons-defense', 'defense');
+  renderZoneButtonsRow('zone-buttons-attack', 'attack');
+  updateZonePanelHints();
   await refreshGoalGrids();
 }
 
@@ -662,36 +769,145 @@ function renderZoneSelector() {
   });
 }
 
+let lastSummary = null;
+
 async function refreshGoalGrids() {
   if (!state.matchId) return;
   try {
     const summary = await api(`/matches/${state.matchId}/summary`);
+    lastSummary = summary;
     renderGoalGrid('goal-grid-attack', summary.zones.attack, 'attack');
     renderGoalGrid('goal-grid-defense', summary.zones.defense, 'defense');
+    renderGkStatsCards(summary);
+    renderAttackStatsTable(summary);
   } catch (e) { /* si falla, no rompemos el resto de la pantalla por esto */ }
 }
 
 function renderGoalGrid(containerId, zoneData, mode) {
   $(containerId).innerHTML = ZONES.map(z => {
     const d = zoneData[z] || {};
-    let count, sub, cls;
+    let big, cls;
     if (mode === 'attack') {
-      count = d.shots || 0;
-      sub = d.goals ? `${d.goals} gol${d.goals === 1 ? '' : 'es'}` : (count ? 'sin gol' : '');
-      cls = d.goals > 0 ? 'has-goals' : (count > 0 ? 'has-shots-only' : '');
+      big = `${d.goals || 0}-${d.shots || 0}`;
+      cls = (d.goals || 0) > 0 ? 'has-goals' : ((d.shots || 0) > 0 ? 'has-shots-only' : '');
     } else {
-      count = d.shots_faced || 0;
-      sub = count ? `${d.saves || 0} par. / ${d.goals_conceded || 0} enc.` : '';
-      cls = d.goals_conceded > 0 ? 'has-goals' : (count > 0 ? 'has-shots-only' : '');
+      big = `${d.saves || 0}-${d.goals_conceded || 0}`;
+      cls = (d.goals_conceded || 0) > 0 ? 'has-goals' : ((d.shots_faced || 0) > 0 ? 'has-shots-only' : '');
     }
     return `
       <div class="goal-zone ${cls}">
+        <div class="zone-count">${big}</div>
         <div class="zone-label">${z}</div>
-        <div class="zone-count">${count || ''}</div>
-        <div class="zone-sub">${sub}</div>
       </div>`;
   }).join('');
 }
+
+function renderGkStatsCards(summary) {
+  const gk = summary.players.find(p => p.is_gk);
+  const t = (gk && gk.totals) || {};
+  const saves = t.saves || 0, conceded = t.goals_conceded || 0, off = t.shots_off || 0;
+  const totalFaced = saves + conceded;
+  const pct = totalFaced ? Math.round((saves / totalFaced) * 100) : 0;
+  $('gk-stats-cards').innerHTML = `
+    <div class="stat-card"><div class="stat-value">${saves}</div><div class="stat-label">Paradas</div></div>
+    <div class="stat-card"><div class="stat-value">${conceded}</div><div class="stat-label">Goles Recibidos</div></div>
+    <div class="stat-card"><div class="stat-value">${off}</div><div class="stat-label">Tiros Fuera</div></div>
+    <div class="stat-card"><div class="stat-value">${pct}%</div><div class="stat-label">Efectividad</div></div>`;
+}
+
+function renderAttackStatsTable(summary) {
+  const outfield = summary.players.filter(p => !p.is_gk);
+  $('attack-stats-body').innerHTML = outfield.map(p => {
+    const t = p.totals || {};
+    const shots = t.shots || 0, goals = t.goals || 0, saved = t.shots_on_target || 0, off = t.shots_off || 0;
+    const pct = shots ? Math.round((goals / shots) * 100) : 0;
+    return `<tr><td>${p.number} ${p.name}</td><td>${shots}</td><td>${goals}</td><td>${saved}</td><td>${off}</td><td>${pct}%</td></tr>`;
+  }).join('') || '<tr><td colspan="6" class="hint">Sin jugadores todavía</td></tr>';
+}
+
+// ---------------------------------------------------------------------
+// Paneles clásicos DEFENSA / ATAQUE (dos columnas, con su propia zona)
+// ---------------------------------------------------------------------
+function renderZoneButtonsRow(containerId, side) {
+  const selected = side === 'defense' ? state.zoneDefense : state.zoneAttack;
+  $(containerId).innerHTML = ZONES.map(z =>
+    `<button class="zone-pill ${selected === z ? 'zone-pill-selected' : ''}" data-zone="${z}">${z}</button>`
+  ).join('');
+
+  $(containerId).querySelectorAll('.zone-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const z = btn.dataset.zone;
+      if (side === 'defense') {
+        state.zoneDefense = (state.zoneDefense === z) ? null : z;
+      } else {
+        state.zoneAttack = (state.zoneAttack === z) ? null : z;
+      }
+      renderZoneButtonsRow(containerId, side);
+    });
+  });
+}
+
+function updateZonePanelHints() {
+  const gk = (state.matchPlayers || []).find(p => p.is_gk);
+  $('defense-hint').textContent = gk
+    ? `Portero/a: ${gk.number} ${gk.name}`
+    : 'Sin portero/a en la plantilla';
+
+  const attacker = (state.matchPlayers || []).find(p => p.id === state.selectedManualPlayerId && !p.is_gk);
+  $('attack-hint').textContent = attacker
+    ? `Jugador: ${attacker.number} ${attacker.name}`
+    : 'Selecciona un jugador (abajo) para poder registrar';
+}
+
+async function registerZoneAction(side, actionType, label) {
+  const gk = (state.matchPlayers || []).find(p => p.is_gk);
+  const attacker = (state.matchPlayers || []).find(p => p.id === state.selectedManualPlayerId && !p.is_gk);
+  const player = side === 'defense' ? gk : attacker;
+  const zone = side === 'defense' ? state.zoneDefense : state.zoneAttack;
+
+  if (!player) {
+    addFeedItem(side === 'defense' ? 'No hay portero/a en la plantilla' : 'Selecciona primero un jugador de ataque', 'error');
+    return;
+  }
+
+  try {
+    const event = await api(`/matches/${state.matchId}/events`, {
+      method: 'POST',
+      body: JSON.stringify({ player_id: player.id, action_type: actionType, zone }),
+    });
+    const zoneSuffix = zone ? ` (zona ${zone})` : '';
+    const message = `Registrado: ${side === 'defense' ? 'Portero/a' : 'Jugador'} ${player.number} — ${label}${zoneSuffix}`;
+    addFeedItem(message, 'registered');
+    speak(message);
+    if (side === 'defense') state.zoneDefense = null; else state.zoneAttack = null;
+    renderZoneButtonsRow(side === 'defense' ? 'zone-buttons-defense' : 'zone-buttons-attack', side);
+    const match = await api(`/matches/${state.matchId}`);
+    $('score-us').textContent = match.score_us;
+    $('score-them').textContent = match.score_them;
+    await refreshGoalGrids();
+  } catch (e) {
+    addFeedItem('Error al registrar: ' + e.message, 'error');
+  }
+}
+
+$('gk-save-btn').addEventListener('click', () => registerZoneAction('defense', 'gk_save', 'Parada'));
+$('gk-goal-btn').addEventListener('click', () => registerZoneAction('defense', 'gk_goal_conceded', 'Gol Recibido'));
+$('gk-shot-off-btn').addEventListener('click', () => registerZoneAction('defense', 'gk_shot_off', 'Tiro Fuera'));
+$('attack-goal-btn').addEventListener('click', () => registerZoneAction('attack', 'goal', 'Gol'));
+$('attack-saved-btn').addEventListener('click', () => registerZoneAction('attack', 'shot_on_target', 'Parado'));
+$('attack-shot-off-btn').addEventListener('click', () => registerZoneAction('attack', 'shot_off', 'Tiro Fuera'));
+
+// --- Fila de acciones globales (estilo app clásica) ---
+$('global-undo-btn').addEventListener('click', () => $('undo-btn').click());
+$('global-pdf-btn').addEventListener('click', () => $('export-pdf-btn').click());
+$('global-voice-btn').addEventListener('click', () => {
+  if ($('voice-engine').value === 'whisper') {
+    addFeedItem('Modo Whisper activo: mantén pulsado el botón de más abajo para hablar', 'heard');
+    return;
+  }
+  $('voice-btn').click();
+  $('global-voice-btn').classList.toggle('listening', state.isListening);
+});
 
 // ---------------------------------------------------------------------
 // Selección de jugador y registro manual (a mano, sin voz)
@@ -741,6 +957,7 @@ function selectManualPlayer(playerId) {
   panel.style.display = 'block';
   $('manual-selected-label').textContent = `${player.is_gk ? 'Portero/a' : 'Jugador'} ${player.number} — ${player.name}`;
   renderZoneSelector();
+  updateZonePanelHints();
 
   const actions = player.is_gk ? GK_ACTIONS : OUTFIELD_ACTIONS;
   $('manual-action-buttons').innerHTML = actions.map(([type, label, cls]) =>
