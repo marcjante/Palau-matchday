@@ -14,9 +14,9 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-body { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); min-height: 100vh; padding-bottom: 90px; }
+body { background: linear-gradient(135deg, #141414 0%, #4a1310 100%); min-height: 100vh; padding-bottom: 90px; }
 .container { max-width: 480px; margin: 0 auto; background: #fff; min-height: 100vh; box-shadow: 0 0 20px rgba(0,0,0,0.2); }
-header { background: linear-gradient(to right, #2c3e50, #4a6491); color: #fff; padding: 14px; text-align: center; }
+header { background: linear-gradient(to right, #000, #d22f25); color: #fff; padding: 14px; text-align: center; border-bottom: 3px solid #fadf4b; }
 header img.crest { width: 46px; height: auto; display: block; margin: 0 auto 6px; }
 header h1 { font-size: 1.2rem; }
 .screen { display: none; padding: 14px; }
@@ -26,7 +26,7 @@ header h1 { font-size: 1.2rem; }
 label { display: block; font-size: 0.8rem; color: #555; margin: 10px 0 4px; }
 input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.95rem; }
 button.primary {
-  width: 100%; margin-top: 16px; padding: 12px; background: #059669; color: #fff; border: none;
+  width: 100%; margin-top: 16px; padding: 12px; background: #d22f25; color: #fff; border: none;
   border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer;
 }
 button.secondary {
@@ -64,7 +64,7 @@ button.secondary {
 .section-label { font-size: 0.75rem; color: #666; margin: 4px 0 6px; font-weight: bold; }
 .auth-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
 .auth-tab { flex: 1; padding: 10px; border: none; background: #eee; color: #666; border-radius: 8px; font-weight: bold; cursor: pointer; }
-.auth-tab.active { background: #2c3e50; color: #fff; }
+.auth-tab.active { background: #000; color: #fadf4b; }
 .match-players-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .match-player-card {
   background: #f8f9fa; border: 2px solid #ddd; border-radius: 8px; padding: 8px 10px; cursor: pointer;
@@ -115,27 +115,23 @@ button.secondary {
   flex: 1; min-width: 0; background: #fff; border: 2px solid #ddd; border-radius: 10px;
   padding: 10px 8px; display: flex; flex-direction: column; align-items: center;
 }
-.zone-panel-defense { border-color: #3498db; }
-.zone-panel-attack { border-top: 3px solid #059669; }
+.zone-panel-defense { border-color: #000; }
+.zone-panel-attack { border-top: 3px solid #fadf4b; }
 .zone-panel-title { font-weight: bold; font-size: 0.78rem; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; }
-.title-defense { color: #3498db; }
-.title-attack { color: #059669; }
+.title-defense { color: #000; }
+.title-attack { color: #b8860b; }
 
 .goal-grid-small {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; width: 100%;
-  background: #1e293b; padding: 4px; border-radius: 6px; margin-bottom: 8px;
+  width: 100%; border-radius: 6px; overflow: hidden; margin-bottom: 8px;
 }
-.goal-grid-small .goal-zone { min-height: 34px; padding: 3px 1px; }
-.goal-grid-small .goal-zone .zone-count { font-size: 0.68rem; font-weight: bold; }
-.goal-grid-small .goal-zone .zone-label { font-size: 0.5rem; }
 .goal-grid-small .goal-zone .zone-sub { display: none; }
 
 .zone-buttons-row { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; margin-bottom: 8px; }
 .zone-pill {
-  background: #dbeafe; color: #1e40af; border: none; border-radius: 5px; padding: 3px 6px;
+  background: #fdf3cc; color: #7a5c00; border: none; border-radius: 5px; padding: 3px 6px;
   font-size: 0.62rem; font-weight: bold; cursor: pointer;
 }
-.zone-pill.zone-pill-selected { background: #1e40af; color: #fff; }
+.zone-pill.zone-pill-selected { background: #d22f25; color: #fff; }
 
 .zone-off-btn {
   width: 100%; background: #f59e0b; color: #fff; border: none; border-radius: 6px; padding: 7px;
@@ -169,7 +165,7 @@ button.secondary {
 
 /* --- Tabla clásica de estadísticas por jugador --- */
 .classic-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; margin-bottom: 14px; min-width: 420px; }
-.classic-table th { background: #059669; color: #fff; padding: 6px 4px; text-align: center; }
+.classic-table th { background: #000; color: #fadf4b; padding: 6px 4px; text-align: center; }
 .classic-table td { padding: 5px 4px; text-align: center; border-bottom: 1px solid #eee; }
 .classic-table tr:nth-child(even) { background: #f8f9fa; }
 
@@ -784,22 +780,45 @@ async function refreshGoalGrids() {
 }
 
 function renderGoalGrid(containerId, zoneData, mode) {
-  $(containerId).innerHTML = ZONES.map(z => {
+  const W = 210, H = 140, POST = 7;
+  const innerX = POST, innerY = POST, innerW = W - POST * 2, innerH = H - POST * 2;
+  const colW = innerW / 3, rowH = innerH / 3;
+
+  let cells = '';
+  ZONES.forEach((z, i) => {
+    const col = i % 3, row = Math.floor(i / 3);
+    const x = innerX + col * colW, y = innerY + row * rowH;
     const d = zoneData[z] || {};
-    let big, cls;
+    let big, hasGoal, hasShot;
     if (mode === 'attack') {
       big = `${d.goals || 0}-${d.shots || 0}`;
-      cls = (d.goals || 0) > 0 ? 'has-goals' : ((d.shots || 0) > 0 ? 'has-shots-only' : '');
+      hasGoal = (d.goals || 0) > 0; hasShot = (d.shots || 0) > 0;
     } else {
       big = `${d.saves || 0}-${d.goals_conceded || 0}`;
-      cls = (d.goals_conceded || 0) > 0 ? 'has-goals' : ((d.shots_faced || 0) > 0 ? 'has-shots-only' : '');
+      hasGoal = (d.goals_conceded || 0) > 0; hasShot = (d.shots_faced || 0) > 0;
     }
-    return `
-      <div class="goal-zone ${cls}">
-        <div class="zone-count">${big}</div>
-        <div class="zone-label">${z}</div>
-      </div>`;
-  }).join('');
+    const fill = hasGoal ? 'rgba(210,47,37,0.55)' : (hasShot ? 'rgba(250,223,75,0.35)' : 'transparent');
+    cells += `
+      <rect x="${x}" y="${y}" width="${colW}" height="${rowH}" fill="${fill}" stroke="rgba(255,255,255,0.35)" stroke-width="0.75"/>
+      <text x="${x + colW / 2}" y="${y + rowH / 2 - 3}" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="11" font-weight="bold">${big}</text>
+      <text x="${x + colW / 2}" y="${y + rowH / 2 + 11}" text-anchor="middle" dominant-baseline="central" fill="#fadf4b" font-size="7">${z}</text>`;
+  });
+
+  $(containerId).innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" style="width:100%; display:block;">
+      <defs>
+        <pattern id="net-${containerId}" width="6" height="6" patternUnits="userSpaceOnUse">
+          <path d="M0,6 L6,0" stroke="rgba(255,255,255,0.18)" stroke-width="0.5"/>
+          <path d="M0,0 L6,6" stroke="rgba(255,255,255,0.18)" stroke-width="0.5"/>
+        </pattern>
+      </defs>
+      <rect x="0" y="0" width="${W}" height="${H}" fill="#0f172a"/>
+      <rect x="${innerX}" y="${innerY}" width="${innerW}" height="${innerH}" fill="url(#net-${containerId})"/>
+      ${cells}
+      <rect x="0" y="0" width="${W}" height="${POST}" fill="#000"/>
+      <rect x="0" y="0" width="${POST}" height="${H}" fill="#000"/>
+      <rect x="${W - POST}" y="0" width="${POST}" height="${H}" fill="#000"/>
+    </svg>`;
 }
 
 function renderGkStatsCards(summary) {
