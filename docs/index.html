@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>HC Palau - Estadísticas en Directo</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2c3e50">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="HC Palau">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -96,6 +103,7 @@ button.secondary {
 .team-card-actions button { flex: 1; padding: 8px; border: none; border-radius: 6px; font-size: 0.8rem; cursor: pointer; }
 .team-card-actions .use-team-btn { background: #059669; color: #fff; }
 .team-card-actions .manage-team-btn { background: #eee; color: #333; }
+.team-card-actions .delete-team-btn { background: #dc2626; color: #fff; flex: 0 0 auto; padding: 8px 12px; }
 
 .list-item.inactive { opacity: 0.55; }
 .list-item .actions { display: flex; gap: 6px; }
@@ -207,6 +215,11 @@ button.secondary {
     </div>
 
     <div class="feed" id="feed"></div>
+
+    <div class="top-actions" style="margin-top:12px;">
+      <button id="export-csv-btn"><i class="fas fa-file-csv"></i> Exportar CSV</button>
+      <button id="export-pdf-btn"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
+    </div>
   </div>
 
   <!-- Botón de deshacer: FIJO en pantalla, siempre visible, no depende de la voz -->
@@ -341,10 +354,33 @@ async function renderTeamsLibrary() {
         <div class="team-card-actions">
           <button class="use-team-btn" data-id="${t.id}">Usar en partido</button>
           <button class="manage-team-btn" data-id="${t.id}">Ver plantilla</button>
+          <button class="delete-team-btn" data-id="${t.id}" data-name="${t.name}" title="Borrar equipo"><i class="fas fa-trash"></i></button>
         </div>
       </div>`);
   }
   container.innerHTML = cards.join('');
+
+  container.querySelectorAll('.delete-team-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const name = btn.dataset.name;
+      const sure = confirm(
+        `¿Seguro que quieres borrar "${name}"?\n\nEsto borra TAMBIÉN, de forma permanente, todos sus partidos, jugadores y estadísticas guardadas. No se puede deshacer.`
+      );
+      if (!sure) return;
+      // Segunda confirmación explícita para evitar borrados accidentales de un solo toque
+      const typed = prompt(`Para confirmar, escribe el nombre del equipo tal cual: ${name}`);
+      if (typed !== name) {
+        addFeedItem('Borrado cancelado (el nombre no coincidía)', 'error');
+        return;
+      }
+      try {
+        await api(`/teams/${btn.dataset.id}`, { method: 'DELETE' });
+        await renderTeamsLibrary();
+      } catch (e) {
+        alert('No se pudo borrar: ' + e.message);
+      }
+    });
+  });
 
   container.querySelectorAll('.use-team-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -537,6 +573,38 @@ $('undo-btn').addEventListener('click', async () => {
   } catch (e) {
     addFeedItem('Error: ' + e.message, 'error');
   }
+});
+
+// --- Exportar CSV / PDF ---
+// No se puede usar un <a href> normal porque la API exige la cabecera
+// X-API-Key; hay que pedir el archivo con fetch y forzar la descarga
+// manualmente a partir del blob devuelto.
+async function downloadExport(path, fallbackFilename) {
+  try {
+    const res = await fetch(`${state.apiUrl}${path}`, {
+      headers: { 'X-API-Key': state.apiKey },
+    });
+    if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+    const blob = await res.blob();
+    const disposition = res.headers.get('Content-Disposition') || '';
+    const match = disposition.match(/filename="?([^"]+)"?/);
+    const filename = match ? match[1] : fallbackFilename;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    addFeedItem(`Descargado: ${filename}`, 'registered');
+  } catch (e) {
+    addFeedItem('No se pudo exportar: ' + e.message, 'error');
+  }
+}
+
+$('export-csv-btn').addEventListener('click', () => {
+  downloadExport(`/matches/${state.matchId}/export/csv`, 'estadisticas.csv');
+});
+$('export-pdf-btn').addEventListener('click', () => {
+  downloadExport(`/matches/${state.matchId}/export/pdf`, 'informe.pdf');
 });
 
 $('new-match-btn2').addEventListener('click', () => showScreen('screen-setup'));
