@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>HC Palau - Estadísticas en Directo</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#2c3e50">
+<meta name="theme-color" content="#111">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,9 +14,9 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-body { background: linear-gradient(135deg, #141414 0%, #4a1310 100%); min-height: 100vh; padding-bottom: 90px; }
+body { background: #1a1a1a; min-height: 100vh; padding-bottom: 90px; }
 .container { max-width: 480px; margin: 0 auto; background: #fff; min-height: 100vh; box-shadow: 0 0 20px rgba(0,0,0,0.2); }
-header { background: linear-gradient(to right, #000, #d22f25); color: #fff; padding: 14px; text-align: center; border-bottom: 3px solid #fadf4b; }
+header { background: #111; color: #fff; padding: 16px 14px; text-align: center; border-bottom: 4px solid #fadf4b; }
 header img.crest { width: 46px; height: auto; display: block; margin: 0 auto 6px; }
 header h1 { font-size: 1.2rem; }
 .screen { display: none; padding: 14px; }
@@ -26,7 +26,7 @@ header h1 { font-size: 1.2rem; }
 label { display: block; font-size: 0.8rem; color: #555; margin: 10px 0 4px; }
 input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.95rem; }
 button.primary {
-  width: 100%; margin-top: 16px; padding: 12px; background: #d22f25; color: #fff; border: none;
+  width: 100%; margin-top: 16px; padding: 13px; background: #fadf4b; color: #111; border: none;
   border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer;
 }
 button.secondary {
@@ -45,7 +45,7 @@ button.secondary {
 
 /* --- Match screen --- */
 .scoreboard {
-  display: flex; justify-content: space-between; align-items: center; background: #2c3e50; color: #fff;
+  display: flex; justify-content: space-between; align-items: center; background: #111; color: #fff;
   padding: 14px; border-radius: 10px; margin-bottom: 12px;
 }
 .score { font-size: 1.8rem; font-weight: bold; }
@@ -73,11 +73,11 @@ button.secondary {
 .match-player-card:hover { transform: translateY(-2px); }
 .match-player-card.selected { border-color: #059669; background: #ecfdf5; }
 .match-player-card.is-gk { border-left: 4px solid #0891b2; }
-.match-player-card .num { font-size: 1.1rem; font-weight: bold; color: #2c3e50; }
+.match-player-card .num { font-size: 1.1rem; font-weight: bold; color: #111; }
 .match-player-card .name { font-size: 0.65rem; color: #555; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .manual-action-panel { background: #f8f9fa; border-radius: 10px; padding: 12px; margin-bottom: 12px; }
-.manual-selected-label { font-weight: bold; color: #2c3e50; margin-bottom: 8px; font-size: 0.9rem; }
+.manual-selected-label { font-weight: bold; color: #111; margin-bottom: 8px; font-size: 0.9rem; }
 .manual-action-buttons { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 @media (min-width: 420px) { .manual-action-buttons { grid-template-columns: repeat(3, 1fr); } }
 .manual-action-buttons button {
@@ -92,22 +92,22 @@ button.secondary {
 .zone-selector-label { font-size: 0.72rem; color: #666; margin: 10px 0 6px; }
 .goal-grid {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 14px;
-  background: #1e293b; padding: 6px; border-radius: 8px;
+  background: #111; padding: 6px; border-radius: 10px;
 }
 .goal-grid-selector { margin-bottom: 10px; }
 .goal-zone {
-  background: #334155; border-radius: 5px; padding: 8px 2px; text-align: center; color: #fff;
+  background: #fafafa; border-radius: 5px; padding: 8px 2px; text-align: center; color: #111;
   min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center;
   cursor: default;
 }
 .goal-grid-selector .goal-zone { cursor: pointer; }
-.goal-grid-selector .goal-zone:hover { background: #475569; }
-.goal-grid-selector .goal-zone.zone-selected { background: #059669; box-shadow: 0 0 0 2px #34d399 inset; }
-.goal-zone .zone-label { font-size: 0.62rem; opacity: 0.6; }
+.goal-grid-selector .goal-zone:hover { background: #f0f0f0; }
+.goal-grid-selector .goal-zone.zone-selected { background: #fadf4b; box-shadow: 0 0 0 2px #111 inset; }
+.goal-zone .zone-label { font-size: 0.62rem; opacity: 0.55; }
 .goal-zone .zone-count { font-size: 0.95rem; font-weight: bold; }
 .goal-zone .zone-sub { font-size: 0.6rem; opacity: 0.85; }
-.goal-zone.has-goals { background: #dc2626; }
-.goal-zone.has-shots-only { background: #475569; }
+.goal-zone.has-goals { background: #111; color: #fadf4b; }
+.goal-zone.has-shots-only { background: #fadf4b; }
 
 /* --- Paneles de dos columnas: DEFENSA / ATAQUE (estilo app clásica) --- */
 .zone-panels { display: flex; gap: 8px; margin-bottom: 12px; }
@@ -131,7 +131,7 @@ button.secondary {
   background: #fdf3cc; color: #7a5c00; border: none; border-radius: 5px; padding: 3px 6px;
   font-size: 0.62rem; font-weight: bold; cursor: pointer;
 }
-.zone-pill.zone-pill-selected { background: #d22f25; color: #fff; }
+.zone-pill.zone-pill-selected { background: #111; color: #fadf4b; }
 
 .zone-off-btn {
   width: 100%; background: #f59e0b; color: #fff; border: none; border-radius: 6px; padding: 7px;
@@ -160,7 +160,7 @@ button.secondary {
 /* --- Tarjetas de estadísticas del portero --- */
 .stats-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 14px; }
 .stat-card { background: #f8f9fa; border-radius: 8px; padding: 10px; text-align: center; }
-.stat-card .stat-value { font-size: 1.3rem; font-weight: bold; color: #2c3e50; }
+.stat-card .stat-value { font-size: 1.3rem; font-weight: bold; color: #111; }
 .stat-card .stat-label { font-size: 0.65rem; color: #666; }
 
 /* --- Tabla clásica de estadísticas por jugador --- */
@@ -205,7 +205,7 @@ button.secondary {
 .team-card {
   background: #f8f9fa; border: 1px solid #eee; border-radius: 10px; padding: 12px; margin-bottom: 10px;
 }
-.team-card-name { font-weight: bold; font-size: 1rem; color: #2c3e50; }
+.team-card-name { font-weight: bold; font-size: 1rem; color: #111; }
 .team-card-sub { font-size: 0.8rem; color: #7f8c8d; margin: 2px 0 8px; }
 .team-card-actions { display: flex; gap: 8px; }
 .team-card-actions button { flex: 1; padding: 8px; border: none; border-radius: 6px; font-size: 0.8rem; cursor: pointer; }
@@ -286,7 +286,7 @@ button.secondary {
   <!-- PANTALLA: Biblioteca de todos los equipos guardados -->
   <div id="screen-teams" class="screen">
     <button class="secondary" id="teams-back-btn"><i class="fas fa-arrow-left"></i> Volver</button>
-    <h2 style="margin:14px 0 8px;font-size:1.05rem;color:#2c3e50;">Mis equipos</h2>
+    <h2 style="margin:14px 0 8px;font-size:1.05rem;color:#111;">Mis equipos</h2>
     <div class="hint" style="margin-bottom:10px;">Cada equipo guarda su plantilla de forma permanente — no hace falta volver a añadir jugadores cada vez.</div>
     <div id="teams-library-list"></div>
   </div>
@@ -780,7 +780,7 @@ async function refreshGoalGrids() {
 }
 
 function renderGoalGrid(containerId, zoneData, mode) {
-  const W = 210, H = 140, POST = 7;
+  const W = 240, H = 156, POST = 8, RADIUS = 10;
   const innerX = POST, innerY = POST, innerW = W - POST * 2, innerH = H - POST * 2;
   const colW = innerW / 3, rowH = innerH / 3;
 
@@ -791,33 +791,35 @@ function renderGoalGrid(containerId, zoneData, mode) {
     const d = zoneData[z] || {};
     let big, hasGoal, hasShot;
     if (mode === 'attack') {
-      big = `${d.goals || 0}-${d.shots || 0}`;
+      big = `${d.goals || 0}/${d.shots || 0}`;
       hasGoal = (d.goals || 0) > 0; hasShot = (d.shots || 0) > 0;
     } else {
-      big = `${d.saves || 0}-${d.goals_conceded || 0}`;
+      big = `${d.saves || 0}/${d.goals_conceded || 0}`;
       hasGoal = (d.goals_conceded || 0) > 0; hasShot = (d.shots_faced || 0) > 0;
     }
-    const fill = hasGoal ? 'rgba(210,47,37,0.55)' : (hasShot ? 'rgba(250,223,75,0.35)' : 'transparent');
+    const fill = hasGoal ? '#111111' : (hasShot ? '#fadf4b' : 'transparent');
+    const textColor = hasGoal ? '#fadf4b' : '#111111';
+    const labelColor = hasGoal ? 'rgba(250,223,75,0.6)' : (hasShot ? 'rgba(17,17,17,0.55)' : '#9a9a9a');
     cells += `
-      <rect x="${x}" y="${y}" width="${colW}" height="${rowH}" fill="${fill}" stroke="rgba(255,255,255,0.35)" stroke-width="0.75"/>
-      <text x="${x + colW / 2}" y="${y + rowH / 2 - 3}" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="11" font-weight="bold">${big}</text>
-      <text x="${x + colW / 2}" y="${y + rowH / 2 + 11}" text-anchor="middle" dominant-baseline="central" fill="#fadf4b" font-size="7">${z}</text>`;
+      <rect x="${x + 1}" y="${y + 1}" width="${colW - 2}" height="${rowH - 2}" rx="4" fill="${fill}"/>
+      <text x="${x + colW / 2}" y="${y + rowH / 2 - 4}" text-anchor="middle" dominant-baseline="central" fill="${textColor}" font-size="13" font-weight="600" font-family="inherit">${big}</text>
+      <text x="${x + colW / 2}" y="${y + rowH / 2 + 12}" text-anchor="middle" dominant-baseline="central" fill="${labelColor}" font-size="7" letter-spacing="0.5" font-family="inherit">${z}</text>`;
   });
+
+  // Líneas finas de la red, de un color neutro sobre fondo claro
+  let netLines = '';
+  for (let i = 1; i < 3; i++) {
+    const gx = innerX + i * colW, gy = innerY + i * rowH;
+    netLines += `<line x1="${gx}" y1="${innerY}" x2="${gx}" y2="${innerY + innerH}" stroke="#e2e2e2" stroke-width="1"/>`;
+    netLines += `<line x1="${innerX}" y1="${gy}" x2="${innerX + innerW}" y2="${gy}" stroke="#e2e2e2" stroke-width="1"/>`;
+  }
 
   $(containerId).innerHTML = `
     <svg viewBox="0 0 ${W} ${H}" style="width:100%; display:block;">
-      <defs>
-        <pattern id="net-${containerId}" width="6" height="6" patternUnits="userSpaceOnUse">
-          <path d="M0,6 L6,0" stroke="rgba(255,255,255,0.18)" stroke-width="0.5"/>
-          <path d="M0,0 L6,6" stroke="rgba(255,255,255,0.18)" stroke-width="0.5"/>
-        </pattern>
-      </defs>
-      <rect x="0" y="0" width="${W}" height="${H}" fill="#0f172a"/>
-      <rect x="${innerX}" y="${innerY}" width="${innerW}" height="${innerH}" fill="url(#net-${containerId})"/>
+      <rect x="0" y="0" width="${W}" height="${H}" rx="${RADIUS}" fill="#111111"/>
+      <rect x="${innerX}" y="${innerY}" width="${innerW}" height="${innerH}" rx="4" fill="#fafafa"/>
+      ${netLines}
       ${cells}
-      <rect x="0" y="0" width="${W}" height="${POST}" fill="#000"/>
-      <rect x="0" y="0" width="${POST}" height="${H}" fill="#000"/>
-      <rect x="${W - POST}" y="0" width="${POST}" height="${H}" fill="#000"/>
     </svg>`;
 }
 
