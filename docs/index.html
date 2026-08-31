@@ -89,6 +89,26 @@ button.secondary {
 .manual-action-buttons button.a-bad { background: #f59e0b; }
 .manual-action-buttons button.a-neutral { background: #0891b2; }
 
+.zone-selector-label { font-size: 0.72rem; color: #666; margin: 10px 0 6px; }
+.goal-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 14px;
+  background: #1e293b; padding: 6px; border-radius: 8px;
+}
+.goal-grid-selector { margin-bottom: 10px; }
+.goal-zone {
+  background: #334155; border-radius: 5px; padding: 8px 2px; text-align: center; color: #fff;
+  min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  cursor: default;
+}
+.goal-grid-selector .goal-zone { cursor: pointer; }
+.goal-grid-selector .goal-zone:hover { background: #475569; }
+.goal-grid-selector .goal-zone.zone-selected { background: #059669; box-shadow: 0 0 0 2px #34d399 inset; }
+.goal-zone .zone-label { font-size: 0.62rem; opacity: 0.6; }
+.goal-zone .zone-count { font-size: 0.95rem; font-weight: bold; }
+.goal-zone .zone-sub { font-size: 0.6rem; opacity: 0.85; }
+.goal-zone.has-goals { background: #dc2626; }
+.goal-zone.has-shots-only { background: #475569; }
+
 .voice-btn {
   width: 100%; padding: 18px; background: linear-gradient(to right, #0891b2, #0e7490); color: #fff;
   border: none; border-radius: 12px; font-weight: bold; font-size: 1.1rem; cursor: pointer;
@@ -252,8 +272,18 @@ button.secondary {
 
     <div id="manual-action-panel" class="manual-action-panel" style="display:none;">
       <div id="manual-selected-label" class="manual-selected-label"></div>
+
+      <div class="zone-selector-label">Zona (opcional, toca para marcar dónde)</div>
+      <div id="manual-zone-selector" class="goal-grid goal-grid-selector"></div>
+
       <div id="manual-action-buttons" class="manual-action-buttons"></div>
     </div>
+
+    <div class="section-label">Portería rival (ataque)</div>
+    <div id="goal-grid-attack" class="goal-grid"></div>
+
+    <div class="section-label">Nuestra portería (defensa)</div>
+    <div id="goal-grid-defense" class="goal-grid"></div>
 
     <label style="font-size:0.75rem;color:#666;margin-bottom:4px;">Motor de reconocimiento de voz</label>
     <select id="voice-engine" style="margin-bottom:10px;">
@@ -595,6 +625,8 @@ async function refreshMatchScreen() {
   $('match-opponent').textContent = opp ? opp.name : '';
   updateActiveBadge(null);
   await renderMatchPlayers();
+  renderZoneSelector();
+  await refreshGoalGrids();
 }
 
 function updateActiveBadge(label) {
@@ -608,6 +640,57 @@ function updateActiveBadge(label) {
     $('active-label').textContent = 'Ningún jugador activo';
     $('active-badge').querySelector('.sub').textContent = 'Di "jugador N" o "portero" para empezar';
   }
+}
+
+// ---------------------------------------------------------------------
+// Dibujo de las porterías (9 zonas: A1-A3 / B1-B3 / C1-C3)
+// ---------------------------------------------------------------------
+const ZONES = ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3'];
+
+function renderZoneSelector() {
+  $('manual-zone-selector').innerHTML = ZONES.map(z => `
+    <div class="goal-zone ${state.selectedManualZone === z ? 'zone-selected' : ''}" data-zone="${z}">
+      <div class="zone-label">${z}</div>
+    </div>`).join('');
+
+  $('manual-zone-selector').querySelectorAll('.goal-zone').forEach(cell => {
+    cell.addEventListener('click', () => {
+      const zone = cell.dataset.zone;
+      state.selectedManualZone = (state.selectedManualZone === zone) ? null : zone; // tocar otra vez deselecciona
+      renderZoneSelector();
+    });
+  });
+}
+
+async function refreshGoalGrids() {
+  if (!state.matchId) return;
+  try {
+    const summary = await api(`/matches/${state.matchId}/summary`);
+    renderGoalGrid('goal-grid-attack', summary.zones.attack, 'attack');
+    renderGoalGrid('goal-grid-defense', summary.zones.defense, 'defense');
+  } catch (e) { /* si falla, no rompemos el resto de la pantalla por esto */ }
+}
+
+function renderGoalGrid(containerId, zoneData, mode) {
+  $(containerId).innerHTML = ZONES.map(z => {
+    const d = zoneData[z] || {};
+    let count, sub, cls;
+    if (mode === 'attack') {
+      count = d.shots || 0;
+      sub = d.goals ? `${d.goals} gol${d.goals === 1 ? '' : 'es'}` : (count ? 'sin gol' : '');
+      cls = d.goals > 0 ? 'has-goals' : (count > 0 ? 'has-shots-only' : '');
+    } else {
+      count = d.shots_faced || 0;
+      sub = count ? `${d.saves || 0} par. / ${d.goals_conceded || 0} enc.` : '';
+      cls = d.goals_conceded > 0 ? 'has-goals' : (count > 0 ? 'has-shots-only' : '');
+    }
+    return `
+      <div class="goal-zone ${cls}">
+        <div class="zone-label">${z}</div>
+        <div class="zone-count">${count || ''}</div>
+        <div class="zone-sub">${sub}</div>
+      </div>`;
+  }).join('');
 }
 
 // ---------------------------------------------------------------------
@@ -646,6 +729,7 @@ async function renderMatchPlayers() {
 
 function selectManualPlayer(playerId) {
   state.selectedManualPlayerId = playerId;
+  state.selectedManualZone = null;
   const player = (state.matchPlayers || []).find(p => p.id === playerId);
   if (!player) return;
 
@@ -656,6 +740,7 @@ function selectManualPlayer(playerId) {
   const panel = $('manual-action-panel');
   panel.style.display = 'block';
   $('manual-selected-label').textContent = `${player.is_gk ? 'Portero/a' : 'Jugador'} ${player.number} — ${player.name}`;
+  renderZoneSelector();
 
   const actions = player.is_gk ? GK_ACTIONS : OUTFIELD_ACTIONS;
   $('manual-action-buttons').innerHTML = actions.map(([type, label, cls]) =>
@@ -669,19 +754,24 @@ function selectManualPlayer(playerId) {
 
 async function registerManualAction(playerId, actionType, label) {
   try {
+    const zone = state.selectedManualZone;
     const event = await api(`/matches/${state.matchId}/events`, {
       method: 'POST',
-      body: JSON.stringify({ player_id: playerId, action_type: actionType }),
+      body: JSON.stringify({ player_id: playerId, action_type: actionType, zone }),
     });
     const player = (state.matchPlayers || []).find(p => p.id === playerId);
     const role = player && player.is_gk ? 'Portero/a' : 'Jugador';
     const number = player ? player.number : '';
-    const message = `Registrado (manual): ${role} ${number} — ${label}`;
+    const zoneSuffix = zone ? ` (zona ${zone})` : '';
+    const message = `Registrado (manual): ${role} ${number} — ${label}${zoneSuffix}`;
     addFeedItem(message, 'registered');
     speak(message);
     const match = await api(`/matches/${state.matchId}`);
     $('score-us').textContent = match.score_us;
     $('score-them').textContent = match.score_them;
+    state.selectedManualZone = null;
+    renderZoneSelector();
+    await refreshGoalGrids();
   } catch (e) {
     addFeedItem('Error al registrar: ' + e.message, 'error');
   }
@@ -718,6 +808,7 @@ async function handleVoiceResponse(resp) {
     const match = await api(`/matches/${state.matchId}`);
     $('score-us').textContent = match.score_us;
     $('score-them').textContent = match.score_them;
+    await refreshGoalGrids();
   }
 }
 
@@ -761,6 +852,7 @@ $('undo-btn').addEventListener('click', async () => {
     const match = await api(`/matches/${state.matchId}`);
     $('score-us').textContent = match.score_us;
     $('score-them').textContent = match.score_them;
+    await refreshGoalGrids();
   } catch (e) {
     addFeedItem('Error: ' + e.message, 'error');
   }

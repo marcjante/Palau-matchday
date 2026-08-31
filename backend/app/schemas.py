@@ -117,6 +117,7 @@ class MatchClockUpdate(BaseModel):
 class ManualEventCreate(BaseModel):
     player_id: int
     action_type: str
+    zone: Optional[str] = None  # p.ej. "A1".."C3", solo relevante en acciones de tiro/parada/gol
 
 
 class VoiceCommandIn(BaseModel):
@@ -132,6 +133,7 @@ class EventOut(BaseModel):
     match_second: int
     wall_time: datetime
     raw_text: Optional[str] = None
+    zone: Optional[str] = None
     deltas: Dict[str, int]
 
 

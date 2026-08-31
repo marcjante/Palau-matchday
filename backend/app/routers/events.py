@@ -21,7 +21,7 @@ def _apply_score_delta(match: models.Match, action_type: str, sign: int):
         match.score_them = max(0, match.score_them + sign)
 
 
-def _register_event(db: Session, match: models.Match, player: models.Player, action_type: str, raw_text: str):
+def _register_event(db: Session, match: models.Match, player: models.Player, action_type: str, raw_text: str, zone: str = None):
     if action_type not in ACTION_DELTAS:
         raise HTTPException(400, f"Acción desconocida: {action_type}")
 
@@ -38,6 +38,7 @@ def _register_event(db: Session, match: models.Match, player: models.Player, act
         action_type=action_type,
         match_second=match.clock_seconds,
         raw_text=raw_text,
+        zone=zone,
         deltas=deltas,
     )
     _apply_score_delta(match, action_type, +1)
@@ -85,7 +86,7 @@ def register_manual_event(match_id: int, payload: schemas.ManualEventCreate, db:
     player = db.query(models.Player).get(payload.player_id)
     if not player or player.team_id != match.team_id:
         raise HTTPException(404, "Jugador no encontrado en este equipo")
-    return _register_event(db, match, player, payload.action_type, f"(manual) {ACTION_LABELS.get(payload.action_type, payload.action_type)}")
+    return _register_event(db, match, player, payload.action_type, f"(manual) {ACTION_LABELS.get(payload.action_type, payload.action_type)}", zone=payload.zone)
 
 
 @router.get("/matches/{match_id}/events", response_model=List[schemas.EventOut])
@@ -179,8 +180,9 @@ def _execute_result(db: Session, match: models.Match, active_player, result, hea
     if result.kind == "help":
         return schemas.VoiceCommandOut(
             status="help", heard_text=heard_text,
-            message='Ataque (por defecto): "jugador 5 gol" o "numero 5 parado". '
-                    'Defensa (solo si dices "portero"/"portera"): "portero parada". '
+            message='Ataque (por defecto): "jugador 5 zona a1 gol" o "numero 5 parado". '
+                    'Defensa (solo si dices "portero"/"portera"): "portero parada zona b2". '
+                    'La zona es opcional: puedes decir solo "jugador 5 gol" sin especificar dónde. '
                     'Una vez dicho "jugador 5" o "portero", puedes seguir solo con la acción: "gol", "pierde", "recupera"... '
                     'Control: "deshacer", "elimina el ultimo gol del jugador 5", '
                     '"cambiar la ultima accion a asistencia", "corregir jugador 8 por jugador 6".',
@@ -285,7 +287,7 @@ def _execute_result(db: Session, match: models.Match, active_player, result, hea
             if not player:
                 return schemas.VoiceCommandOut(status="error", heard_text=heard_text, message="No hay ningún jugador activo. Di primero 'jugador N' o 'portero'.")
 
-        event = _register_event(db, match, player, result.data["action_type"], result.data["raw_text"])
+        event = _register_event(db, match, player, result.data["action_type"], result.data["raw_text"], zone=result.data.get("zone"))
 
         # Actualizar el contexto activo si el comando lo fijaba explícitamente
         if result.data.get("set_context"):
@@ -294,9 +296,10 @@ def _execute_result(db: Session, match: models.Match, active_player, result, hea
 
         role = "Portero/a" if player.is_gk else "Jugador"
         label = ACTION_LABELS.get(result.data["action_type"], result.data["action_type"])
+        zone_suffix = f" (zona {event.zone})" if event.zone else ""
         return schemas.VoiceCommandOut(
             status="registered", heard_text=heard_text,
-            message=f"Registrado: {role} {player.number} — {label}",
+            message=f"Registrado: {role} {player.number} — {label}{zone_suffix}",
             event=event,
             active_player_id=player.id,
             active_player_label=_active_player_label(player),

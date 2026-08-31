@@ -94,6 +94,7 @@ class MatchEvent(Base):
     match_second = Column(Integer, default=0)
     wall_time = Column(DateTime, default=datetime.utcnow)
     raw_text = Column(Text, nullable=True)
+    zone = Column(String, nullable=True)  # p.ej. "A1".."C3" — en qué zona de la portería ocurrió (si aplica)
     deltas = Column(JSON, nullable=False)  # {"goals": 1, "shots": 1, ...} para poder revertir/corregir
 
     match = relationship("Match", back_populates="events")

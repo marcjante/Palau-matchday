@@ -82,6 +82,20 @@ GK_PATTERNS = [
 
 GOALKEEPER_WORD_RE = re.compile(r"\bportero\b|\bportera\b")
 PLAYER_NUMBER_RE = re.compile(r"(?:jugador|numero)\s+(\d{1,2})\b")
+ZONE_RE = re.compile(r"\b(a|b|c|be|ce|se)\s*-?\s*([1-3])\b")
+
+
+def extract_zone(text: str):
+    """Detecta patrones como 'a1', 'a 1', 'be 2' (confusión de 'b'), 'ce 3' (confusión de 'c')."""
+    m = ZONE_RE.search(text)
+    if not m:
+        return None
+    letter = m.group(1)
+    if letter == "be":
+        letter = "b"
+    elif letter in ("ce", "se"):
+        letter = "c"
+    return f"{letter.upper()}{m.group(2)}"
 
 UNDO_RE = re.compile(r"deshacer|deshace la ultima|elimina la ultima accion|borra la ultima accion")
 DELETE_LAST_OF_TYPE_RE = re.compile(
@@ -169,13 +183,15 @@ def interpret_command(raw_text: str, active_is_gk: bool = None) -> VoiceCommandR
     if HELP_RE.search(text):
         return VoiceCommandResult("help")
 
+    zone = extract_zone(text)
+
     # "portero"/"portera" -> SIEMPRE defensa (portería), tenga o no número.
     # Además fija el contexto activo a portero/a.
     if GOALKEEPER_WORD_RE.search(text):
         action_type = match_pattern(text, GK_PATTERNS)
         if action_type:
             return VoiceCommandResult("action", is_gk=True, player_number=None,
-                                       action_type=action_type, raw_text=raw_text, set_context=True)
+                                       action_type=action_type, raw_text=raw_text, set_context=True, zone=zone)
         # Se dijo "portero" solo, sin acción -> solo cambia el contexto activo
         return VoiceCommandResult("set_context", is_gk=True, raw_text=raw_text)
 
@@ -186,7 +202,7 @@ def interpret_command(raw_text: str, active_is_gk: bool = None) -> VoiceCommandR
         action_type = match_pattern(text, OUTFIELD_PATTERNS)
         if action_type:
             return VoiceCommandResult("action", is_gk=False, player_number=player_number,
-                                       action_type=action_type, raw_text=raw_text, set_context=True)
+                                       action_type=action_type, raw_text=raw_text, set_context=True, zone=zone)
         # Se dijo "jugador 5" solo, sin acción -> solo cambia el contexto activo
         return VoiceCommandResult("set_context", is_gk=False, player_number=player_number, raw_text=raw_text)
 
@@ -197,6 +213,6 @@ def interpret_command(raw_text: str, active_is_gk: bool = None) -> VoiceCommandR
         action_type = match_pattern(text, patterns)
         if action_type:
             return VoiceCommandResult("action", is_gk=active_is_gk, player_number=None,
-                                       action_type=action_type, raw_text=raw_text, set_context=False)
+                                       action_type=action_type, raw_text=raw_text, set_context=False, zone=zone)
 
     return VoiceCommandResult("not_understood", raw_text=raw_text)

@@ -205,6 +205,34 @@ def player_evolution(player_id: int, season: Optional[str] = None, db: Session =
     }
 
 
+ZONES = ["A1", "A2", "A3", "B1", "B2", "B3", "C1", "C2", "C3"]
+
+
+def _zone_breakdown(events):
+    """
+    Agrega los eventos con zona informada en dos porterías: la del rival
+    (ataque — tiros y goles de nuestro equipo) y la propia (defensa —
+    tiros recibidos, goles encajados y paradas). Pensado para alimentar
+    el dibujo visual de la portería con las 9 zonas.
+    """
+    attack = {z: {"shots": 0, "goals": 0} for z in ZONES}
+    defense = {z: {"shots_faced": 0, "goals_conceded": 0, "saves": 0} for z in ZONES}
+    for ev in events:
+        if not ev.zone or ev.zone not in attack:
+            continue
+        if ev.action_type in ("shot", "shot_on_target", "shot_off", "goal"):
+            attack[ev.zone]["shots"] += 1
+            if ev.action_type == "goal":
+                attack[ev.zone]["goals"] += 1
+        elif ev.action_type in ("gk_save", "gk_goal_conceded", "gk_penalty_saved", "gk_penalty_conceded"):
+            defense[ev.zone]["shots_faced"] += 1
+            if ev.action_type in ("gk_goal_conceded", "gk_penalty_conceded"):
+                defense[ev.zone]["goals_conceded"] += 1
+            elif ev.action_type in ("gk_save", "gk_penalty_saved"):
+                defense[ev.zone]["saves"] += 1
+    return {"attack": attack, "defense": defense}
+
+
 @router.get("/matches/{match_id}/summary")
 def match_summary(match_id: int, db: Session = Depends(get_db)):
     match = db.query(models.Match).get(match_id)
@@ -227,11 +255,12 @@ def match_summary(match_id: int, db: Session = Depends(get_db)):
         "match_id": match.id, "season": match.season, "score_us": match.score_us, "score_them": match.score_them,
         "clock_seconds": match.clock_seconds, "status": match.status,
         "players": players_out,
+        "zones": _zone_breakdown(events),
         "events": [
             {
                 "id": e.id, "player_id": e.player_id, "action_type": e.action_type,
                 "label": ACTION_LABELS.get(e.action_type, e.action_type),
-                "match_second": e.match_second, "raw_text": e.raw_text,
+                "match_second": e.match_second, "raw_text": e.raw_text, "zone": e.zone,
             } for e in sorted(events, key=lambda e: e.id)
         ],
     }
